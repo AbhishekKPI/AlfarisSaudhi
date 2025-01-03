@@ -1,0 +1,9 @@
+function beforeLoadAction(type, form, request){
+  if(type == 'view'){
+    var id = nlapiGetRecordId();
+    nlapiLogExecution('debug',"id",id);    
+     form.addButton('custpage_printworkorder','Print','window.open(\'/app/site/hosting/scriptlet.nl?script=2193&deploy=1&recId='+id+'&end=true\')'); 
+
+    
+  }
+}

@@ -1,0 +1,48 @@
+function updateVehicleExpense() {
+    var customrecord_rent_timesheetSearch = nlapiSearchRecord("customrecord_rent_timesheet",null,
+    [
+       ["custrecord_rent_time_per_hour_rate","isempty",""]
+    ], 
+    [
+       new nlobjSearchColumn("name").setSort(false), 
+       new nlobjSearchColumn("id"), 
+       new nlobjSearchColumn("internalid"), 
+       new nlobjSearchColumn("custrecord_rent_time_status"), 
+       new nlobjSearchColumn("custrecord_rent_time_robd"), 
+       new nlobjSearchColumn("custrecord_rent_time_billing_rule"), 
+       new nlobjSearchColumn("custrecord_rent_time_from_date"), 
+       new nlobjSearchColumn("custrecord_rent_time_to_date"), 
+       new nlobjSearchColumn("custrecord_time_operational_status"), 
+       new nlobjSearchColumn("custrecord_rent_time_agreed_rate"), 
+       new nlobjSearchColumn("custrecord_rent_time_per_hour_rate"), 
+       new nlobjSearchColumn("created"),
+       new nlobjSearchColumn("custrecord_rent_time_rod")
+    ]
+    );
+
+
+    var dupFlagDel = 0;
+    if (customrecord_rent_timesheetSearch) {
+        var filterDupSearchDelLngth = customrecord_rent_timesheetSearch.length;
+        nlapiLogExecution("DEBUG", 'filterDupSearchDelLngth', filterDupSearchDelLngth);
+       // nlapiLogExecution("DEBUG", 'customrecord_rent_timesheetSearch', JSON.stringify(customrecord_rent_timesheetSearch));
+        for (var k = 0; k <filterDupSearchDelLngth; k++) {
+              var dupFlagDel = 0;
+            var delId = customrecord_rent_timesheetSearch[k].getValue("internalid", null);
+            var rent_time_rod = customrecord_rent_timesheetSearch[k].getValue("custrecord_rent_time_rod", null);
+
+
+
+            if(rent_time_rod){
+
+                var soSubsidiary = nlapiLookupField("customrecord_rent_rod", rent_time_rod, "custrecord_rent_rod_per_hour_rate"); 
+nlapiLogExecution("DEBUG", "soSubsidiary",soSubsidiary);
+
+                nlapiLogExecution("DEBUG", 'k', k);
+                nlapiSubmitField("customrecord_rent_timesheet", delId, "custrecord_rent_time_per_hour_rate",soSubsidiary);
+              nlapiLogExecution("DEBUG", "delId",delId);
+               
+              }
+        }
+    }
+}

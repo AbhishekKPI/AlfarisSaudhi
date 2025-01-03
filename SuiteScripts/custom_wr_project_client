@@ -1,0 +1,112 @@
+function pageinitWRAction(type) {
+    if (type == "create" || type == "copy") {
+        var customForm = nlapiGetFieldValue("customform");
+        // if (customForm == 116 || custForm == 117 || custForm == 106) {
+        //     nlapiSetFieldDisplay("custentity_budget", false);
+        // }
+    }
+          var customForm = nlapiGetFieldValue("customform");
+
+  		  // if(customForm==57){
+        //     if (type == "view" || type=="edit" || type=="create") {
+        //         var equip = jobRec.getFieldValue('custentity_equipment');
+        //         var edEquip = jobRec.getFieldValue('custentity_ed_equipment');
+
+        //         if(equip && equip!=''){
+        //             jQuery("#custentity_ed_equipment_fs_lbl").hide();
+        //             jQuery("#custentity_equipment_fs_lbl").show();
+
+        //         }else{
+        //             jQuery("#custentity_ed_equipment_fs_lbl").show();
+        //             jQuery("#custentity_equipment_fs_lbl").hide();
+
+        //         }
+        //     }
+        // }
+}
+
+function saveRecordWRAction() {
+    var recType = nlapiGetFieldValue('custentity_record_type');
+    if (recType == 3) {
+        var startDate = nlapiGetFieldValue("custentity_actual_start_date_time");
+        var endDate = nlapiGetFieldValue("custentity_actual_end_date_time");
+        if (startDate && endDate) {
+            //console.log(startDate + " " + endDate);
+            //startDate
+            var startDateRes = startDate.split(" ");
+           // console.log(startDateRes);
+            var startOrgDate = startDateRes[0];
+            if (startDateRes[1] == "") {
+                var startTime = startDateRes[2] + " " + startDateRes[3];
+            } else {
+                var startTime = startDateRes[1] + " " + startDateRes[2];
+            }
+           // console.log(startTime);
+            //EndDate
+            var endDateRes = endDate.split(" ");
+           // console.log(endDateRes);
+            var endOrgDate = endDateRes[0];
+            if (endDateRes[1] == "") {
+                var endTime = endDateRes[2] + " " + endDateRes[3];
+            } else {
+                var endTime = endDateRes[1] + " " + endDateRes[2];
+            }
+
+            //console.log(endTime);
+            var timeDiff = calculateTime(startTime, endTime);
+            var date_now = new Date(nlapiStringToDate(startDate));
+            var date_future = new Date(nlapiStringToDate(endDate));
+            var delta = Math.abs(date_future - date_now) / 1000;
+            var daysDiff = Math.floor(delta / 86400);
+            //console.log("timeDiff============"+timeDiff);
+            nlapiSetFieldValue("custentity_total_hours", timeDiff);
+            nlapiSetFieldValue("custentity_total_days", daysDiff);
+        }
+    }
+    return true;
+}
+
+function am_pm_to_hours(time) {
+    var hours = Number(time.match(/^(\d+)/)[1]);
+    var minutes = Number(time.match(/:(\d+)/)[1]);
+    var AMPM = time.match(/\s(.*)$/)[1];
+    if (AMPM == "pm" && hours < 12) hours = hours + 12;
+    if (AMPM == "am" && hours == 12) hours = hours - 12;
+    var sHours = hours.toString();
+    var sMinutes = minutes.toString();
+    if (hours < 10) sHours = "0" + sHours;
+    if (minutes < 10) sMinutes = "0" + sMinutes;
+    return (sHours + ':' + sMinutes);
+}
+
+function calculateTime(startTime, endTime) {
+    var startTime = am_pm_to_hours(startTime);
+    if (endTime) { var endTime = am_pm_to_hours(endTime); } else { var endTime = ''; }
+
+
+    var startTimeArray = startTime.split(":");
+    var startInputHrs = parseInt(startTimeArray[0]);
+    var startInputMins = parseInt(startTimeArray[1]);
+
+    var endTimeArray = endTime.split(":");
+    var endInputHrs = parseInt(endTimeArray[0]);
+    var endInputMins = parseInt(endTimeArray[1]);
+
+    var startMin = startInputHrs * 60 + startInputMins;
+    var endMin = endInputHrs * 60 + endInputMins;
+
+    var result;
+
+    if (endMin < startMin) {
+        var minutesPerDay = 24 * 60;
+        result = minutesPerDay - startMin;  // Minutes till midnight
+        result += endMin; // Minutes in the next day
+    } else {
+        result = endMin - startMin;
+    }
+
+    var minutesElapsed = result % 60;
+    var hoursElapsed = (result - minutesElapsed) / 60;
+    return hoursElapsed + ':' + (minutesElapsed < 10 ? '0' + minutesElapsed : minutesElapsed);
+}
+

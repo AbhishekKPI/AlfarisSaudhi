@@ -1,0 +1,211 @@
+function transferPrintAction(request, response) {
+    //Create a saved search and fetch all data
+    var monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    var recID = request.getParameter('intid');
+    var res = nlapiLoadRecord('transfer', recID);
+    nlapiLogExecution("DEBUG", "res", res);
+    var subsidiary = res.getFieldValue('subsidiary');
+    var tran_no = res.getFieldValue('transactionnumber');
+    var tid = res.getFieldValue('tranid');
+    var fromaccount = res.getFieldText('fromaccount');
+    var toaccount = res.getFieldText('toaccount');
+    var frombalance = res.getFieldValue('frombalance');
+    var tobalance = res.getFieldValue('tobalance');
+    var tran_Date = nlapiStringToDate(res.getFieldValue('trandate'));
+    var tDate = tran_Date.getDate() + "-" + monthNames[tran_Date.getMonth()] + "-" + tran_Date.getFullYear();
+    var from_cur = res.getFieldValue('fromcurrencyname');
+    var to_cur = res.getFieldValue('tocurrencyname');
+    var exhrate = res.getFieldValue('exchangerate');
+    var fromamount = res.getFieldValue('fromamount');
+    var toamount = res.getFieldValue('toamount');
+    var memo = res.getFieldValue('memo');
+    var dept = res.getFieldValue('department');
+    var cls = res.getFieldValue('class');
+    var loc = res.getFieldValue('location');
+
+    var template = '';
+    template += '<table style="width:100%;">';
+    template += '<tr>';
+    template += '<td align="center" style="font-size:16px;font-weight:bold;text-decoration: underline;">Transfer</td>';
+    template += '</tr>';
+    template += '</table>';
+    template += '<table style="width:100%; font-size:12px;">';
+    template += '<tr>';
+    // template += '<td style="width:20%;font-weight:bold;">Transaction #</td><td>:</td><td style="width:49%">' + tran_no + '</td>';
+    template += '<td style="width:15%;font-weight:bold;">Transfer #</td><td>:</td><td style="width:44%">' + tid + '</td>';
+    if (memo) {
+        var memotxt = relaceCharector(memo);
+    } else {
+        var memotxt = "";
+    }
+    template += '<td style="width:15%;font-weight:bold;">Memo</td><td>:</td><td style="width:44%">' + memotxt + '</td>';
+    template += '</tr>';
+    template += '<tr>';
+    template += '<td style="width:20%;font-weight:bold;margin-top:-10px;">Date</td><td style="margin-top:-10px;">:</td><td style="width:49%;margin-top:-10px;">' + tDate + '</td>';
+    // if (memo) {
+    //     var memotxt = relaceCharector(memo);
+    // } else {
+    //     var memotxt = "";
+    // }
+    // template += '<td style="width:15%;font-weight:bold;">Memo</td><td>:</td><td style="width:44%">' + memotxt + '</td>';
+    template += '</tr>';
+    template += '</table>';
+    template += '<table style="width:100%;"><tr><td>&nbsp;</td></tr></table>';
+    template += '<table style="width:100%;">';
+    template += '<tr>';
+    template += '<td style="font-weight:bold;font-size:14px;"><u>From Account Details:</u></td>';
+    template += '</tr>';
+    template += '</table>';
+    template += '<table style="width:100%; font-size:12px;">';
+    template += '<tr>';
+    template += '<td style="width:10%;font-weight:bold;">Account</td><td style="width:1%;">:</td><td style="width:70%">' + fromaccount + '</td><td style="width:20%"></td>';
+    template += '</tr>';
+    template += '<tr>';
+    template += '<td style="width:10%;font-weight:bold;">Amount</td><td style="width:1%;">:</td><td style="width:50%">' + fromamount + '</td><td style="width:40%"></td>';
+    template += '</tr>';
+    template += '<tr>';
+    template += '<td style="width:10%;font-weight:bold;">Currency</td><td style="width:1%;">:</td><td style="width:50%">' + from_cur + '</td><td style="width:40%"></td>';
+    template += '</tr>';
+    /*template += '<tr>';
+        template += '<td style="width:15%;font-weight:bold;">Balance</td><td>:</td><td style="width:44%">'+frombalance+'</td>';
+		template += '<td style="width:15%;font-weight:bold;">Balance</td><td>:</td><td style="width:44%">'+tobalance+'</td>';
+		template += '</tr>';*/
+    template += '</table>';
+    template += '<table style="width:100%;"><tr><td>&nbsp;</td></tr></table>';
+    template += '<table style="width:100%;">';
+    template += '<tr>';
+    template += '<td style="font-weight:bold;font-size:14px;"><u>To Account Details:</u></td>';
+    template += '</tr>';
+    template += '</table>';
+
+    template += '<table style="width:100%; font-size:12px;">';
+
+    template += '<tr>';
+    template += '<td style="width:10%;font-weight:bold;">Account</td><td>:</td><td style="width:70%">' + toaccount + '</td><td style="width:20%"></td>';
+    template += '</tr>';
+    template += '<tr>';
+    template += '<td style="width:10%;font-weight:bold;">Amount</td><td>:</td><td style="width:50%">' + toamount + '</td><td style="width:40%"></td>';
+    template += '</tr>';
+    template += '<tr>';
+    template += '<td style="width:10%;font-weight:bold;">Currency</td><td>:</td><td style="width:50%">' + to_cur + '</td><td style="width:40%"></td>';
+    template += '</tr>';
+    /*template += '<tr>';
+        template += '<td style="width:15%;font-weight:bold;">Balance</td><td>:</td><td style="width:44%">'+frombalance+'</td>';
+		template += '<td style="width:15%;font-weight:bold;">Balance</td><td>:</td><td style="width:44%">'+tobalance+'</td>';
+		template += '</tr>';*/
+    template += '</table>';
+    var xml = '<?xml version="1.0"?><!DOCTYPE pdf PUBLIC "-//big.faceless.org//report" "report-1.1.dtd" [<!ENTITY nbsp "&#160;">] >'; // start of template
+    xml += '<pdf>';
+    xml += '<head>';
+    xml += '<style>td p { align:left; } body { background-image:url(https://system.eu2.netsuite.com/core/media/media.nl?id=56944&amp;c=4119372&amp;h=81b3d9cd8670550e52ae);}table.header td {padding: 0;font-size: 10pt;}table.footer td {padding: 0;font-size: 9pt;}</style>';
+    /*xml += '<macrolist>';
+      xml += '<macro id="myheader">';
+      if (subsidiary == '6') {
+          xml += '<table style="width: 100%;"><tr><td><img src="https://system.eu2.netsuite.com/core/media/media.nl?id=1855&amp;c=4119372&amp;h=b46037635396c70b981c" style="width:657px; height:130px;" /></td></tr></table>';
+      }
+      if (subsidiary == '7') {
+          xml += '<table style="width: 100%;"><tr><td><img src="https://system.eu2.netsuite.com/core/media/media.nl?id=1850&amp;c=4119372&amp;h=65fee28313464a6b2b2f" style="width:657px; height:142px;" /></td></tr></table>';
+      }
+      if (subsidiary == '8') {
+          xml += '<table style="width: 100%;"><tr> <td><img src="https://system.eu2.netsuite.com/core/media/media.nl?id=1856&amp;c=4119372&amp;h=18610d51fd734acd68b7" style="width:657px; height:142px;"/></td></tr></table>';
+      }
+      if (subsidiary == '10' || subsidiary == '4') {
+          xml += '<table style="width: 100%;"><tr><td><img src="https://system.eu2.netsuite.com/core/media/media.nl?id=1869&amp;c=4119372&amp;h=226479ca8f9d48bf1920" style="width:657px; height:115px;"/></td></tr></table>';
+      } 
+      if (subsidiary == '11') {
+          xml += '<table style="width: 100%;"><tr><td><img src="https://system.eu2.netsuite.com/core/media/media.nl?id=1867&amp;c=4119372&amp;h=a6604f28b6d63d2e6c92" style="width:657px; height:115px;"/></td></tr></table>';
+      }
+      xml += '</macro>';
+
+      xml += '<macro id="myfooter">';
+      if (subsidiary == '6') {
+      	xml += '<table style="width: 100%;"><tr><td><img src="https://system.eu2.netsuite.com/core/media/media.nl?id=1854&amp;c=4119372&amp;h=695a429237b33f9c5bb5" style="width:640px;height:100px;" /></td></tr><tr><td style="font-size:10px;font-weight:bold;" align="right">Page ( <pagenumber/> of <totalpages/> ) </td></tr></table>';
+      }
+      if (subsidiary == '7') {
+      	xml += '<table style="width: 100%;"><tr><td><img src="https://system.eu2.netsuite.com/core/media/media.nl?id=1854&amp;c=4119372&amp;h=695a429237b33f9c5bb5" style="width:640px;height:100px;" /></td></tr><tr><td style="font-size:10px;font-weight:bold;" align="right">Page ( <pagenumber/> of <totalpages/> ) </td></tr></table>';
+      }
+      if (subsidiary == '8') {
+      	xml += '<table style="width: 100%;"><tr><td><img src="https://system.eu2.netsuite.com/core/media/media.nl?id=1854&amp;c=4119372&amp;h=695a429237b33f9c5bb5" style="width:640px;height:100px;" /></td></tr><tr><td style="font-size:10px;font-weight:bold;" align="right">Page ( <pagenumber/> of <totalpages/> ) </td></tr></table>';
+      }
+      if (subsidiary == '10' || subsidiary == '4') {
+      	xml += '<table style="width: 100%;"><tr><td><img src="https://system.eu2.netsuite.com/core/media/media.nl?id=1868&amp;c=4119372&amp;h=876d82fac1b9fb35842b" style="width:655px; height:94px;" /></td></tr><tr><td style="font-size:10px;font-weight:bold;" align="right">Page ( <pagenumber/> of <totalpages/> ) </td></tr></table>';
+      }	
+      if (subsidiary == '11') {
+      	xml += '<table style="width: 100%;"><tr><td><img src="https://system.eu2.netsuite.com/core/media/media.nl?id=1769&amp;c=4119372&amp;h=fa8458d8b40c0d67bbb6" style="width:655px; height:91px;" /></td></tr><tr><td style="font-size:10px;font-weight:bold;" align="right">Page ( <pagenumber/> of <totalpages/> ) </td></tr></table>';
+      }
+      xml += '</macro>';
+      xml += '</macrolist>';*/
+    xml += '<macrolist>';
+    xml += '<macro id="myheader">';
+    if (subsidiary == '1') { //AFIHER
+        //xml += '<table style="width: 100%;"><tr><td><img src="https://system.eu2.netsuite.com/core/media/media.nl?id=1855&amp;c=4119372&amp;h=b46037635396c70b981c" style="width:657px; height:130px;" /></td></tr></table>';
+        xml += '<table class="header" style="width: 100%;margin-left:-45px; margin-right:-65px;margin-top:-46px; "><tr><td><img src="https://system.eu2.netsuite.com/core/media/media.nl?id=9211&amp;c=4647359&amp;h=fc2ca0a52e15d8d22d59" style="width:800px; height:120px;" /></td></tr></table>';
+    }
+    if (subsidiary == '2') { //AFER AND afer workshop
+        //xml += '<table style="width: 100%;"><tr><td><img src="https://system.eu2.netsuite.com/core/media/media.nl?id=22136&amp;c=4119372&amp;h=5d7212f3555ddee2555f" style="width:657px; height:142px;" /></td></tr></table>';
+        xml += '<table style="width: 100%;margin-left:-47px; margin-right:-67px;margin-top:-48px; "><tr><td><img src="https://system.eu2.netsuite.com/core/media/media.nl?id=9196&amp;c=4647359&amp;h=215721097cda3e1e1ad8" style="width:800px; height:120px;" /></td></tr></table>';
+    }
+    if (subsidiary == '8') { //MMGT
+        xml += '<table style="width: 100%; margin-top:-62px;margin-left:-50px;"><tr> <td><img src="https://4647359.app.netsuite.com/core/media/media.nl?id=14614&amp;c=4647359&amp;h=706874f46a19b489dcee" style="width:768px; height:140px;" /></td></tr></table>';
+    }
+    // if (subsidiary == '10' || subsidiary == '4' || subsidiary == '14') { //ED and AFER ED //ED Workshop
+    //     //xml += '<table style="width: 100%;"><tr><td><img src="https://system.eu2.netsuite.com/core/media/media.nl?id=1869&amp;c=4119372&amp;h=226479ca8f9d48bf1920" style="width:657px; height:115px;"/></td></tr></table>';
+    //     xml += '<table style="width: 100%;margin-left:-47px; margin-right:-67px;margin-top:-48px;"><tr><td><img src="https://system.eu2.netsuite.com/core/media/media.nl?id=57106&amp;c=4119372&amp;h=556dcae1c908dd746c20" style="width:100%;height:100%;" /></td></tr></table>';
+    // }
+    // if (subsidiary == '11') { //AFIHER ED
+    //     //xml += '<table style="width: 100%;"><tr><td><img src="https://system.eu2.netsuite.com/core/media/media.nl?id=1867&amp;c=4119372&amp;h=a6604f28b6d63d2e6c92" style="width:657px; height:115px;"/></td></tr></table>';
+    //     xml += '<table style="width: 100%;margin-left:-47px; margin-right:-67px;margin-top:-48px;"><tr><td><img src="https://system.eu2.netsuite.com/core/media/media.nl?id=57108&amp;c=4119372&amp;h=fb8d76cb6bd7d5623fb8" style="width:100%;height:100%;" /></td></tr></table>';
+
+    // }
+    // else {
+    //     xml += '<table style="width: 100%;"><tr> <td><img src="https://4647359.app.netsuite.com/core/media/media.nl?id=14614&amp;c=4647359&amp;h=706874f46a19b489dcee" style="width:768px; height:140px;" /></td></tr></table>';
+    // }
+    xml += '</macro>';
+
+    xml += '<macro id="myfooter">';
+    // if (subsidiary == '6') {
+    //     //xml += '<table style="width: 100%;"><tr><td><img src="https://system.eu2.netsuite.com/core/media/media.nl?id=1854&amp;c=4119372&amp;h=695a429237b33f9c5bb5" style="width:640px;height:100px;" /></td></tr><tr><td style="font-size:10px;font-weight:bold;" align="right">Page ( <pagenumber/> of <totalpages/> ) </td></tr></table>';
+    //     xml += '<table class="footer" style="width: 100%; margin-left:-45px; margin-right:-60px; margin-bottom:-115px;" ><tr><td align="right" style="margin-top:-13px;">&nbsp;( Page <pagenumber/> of <totalpages/> )</td></tr><tr><td><img src="https://system.eu2.netsuite.com/core/media/media.nl?id=57113&amp;c=4119372&amp;h=16dbf68b8962e9eda8ef" style="width:101%;height:100%;"/></td></tr></table>';
+    //     xml += '<div style="position:relative;top:-113px;bottom:-73px;left:517px;"><img src="https://system.eu2.netsuite.com/core/media/media.nl?id=57110&amp;c=4119372&amp;h=ed3bd4ef7eb629c77000" style="width:100%;height:100%;"/></div>';
+    // }
+    // if (subsidiary == '7' || subsidiary == '13') {
+    //     //xml += '<table style="width: 100%;"><tr><td><img src="https://system.eu2.netsuite.com/core/media/media.nl?id=22137&amp;c=4119372&amp;h=921b0e35559b38a7d673" style="width:640px;height:100px;" /></td></tr><tr><td style="font-size:10px;font-weight:bold;" align="right">Page ( <pagenumber/> of <totalpages/> ) </td></tr></table>';
+    //     xml += '<table class="footer" style="width: 100%; margin-left:-45px; margin-right:-65px; margin-bottom:-115px;" ><tr><td align="right" style="margin-top:-13px;">&nbsp;( Page <pagenumber/> of <totalpages/> )</td></tr><tr><td><img src="https://system.eu2.netsuite.com/core/media/media.nl?id=57109&amp;c=4119372&amp;h=3ee49aaea8b7000504ea" style="width:100%;height:100%;"/></td></tr></table>';
+    //     xml += '<div style="position:relative;top:-113px;bottom:-73px;left:520px;"><img src="https://system.eu2.netsuite.com/core/media/media.nl?id=57110&amp;c=4119372&amp;h=ed3bd4ef7eb629c77000" style="width:100%;height:100%;"/></div>';
+    // }
+    if (subsidiary == '8') {
+        // xml += '<table style="width: 100%;"><tr><td><img src="https://system.eu2.netsuite.com/core/media/media.nl?id=9205&amp;c=4647359&amp;h=7003b6a4832399179079" style="width:758px;height:55%;" /></td></tr><tr><td><img src="https://4647359.app.netsuite.com/core/media/media.nl?id=14615&amp;c=4647359&amp;h=ae717ee9182515bf331e" style="width:758px;height:55%;" /></td></tr><tr><td style="font-size:10px;font-weight:bold;margin-top:-160px;margin-right:110px;" align="right">Page ( <pagenumber/> of <totalpages/> ) </td></tr></table><div style="position:relative;top:-108px;bottom:-92px;left:510px;"><img src="https://system.eu2.netsuite.com/core/media/media.nl?id=9205&amp;c=4647359&amp;h=7003b6a4832399179079" style="width:100%;height:100%;" /></div>';
+        xml += '<table style="width: 100%; margin-left:-50px; margin-right:-65px; margin-bottom: -255px;background-color:#000;margin-top:70px;"><tr><td>    <img src="https://4647359.app.netsuite.com/core/media/media.nl?id=14615&amp;c=4647359&amp;h=ae717ee9182515bf331e" style="width:758px;height:55%;" /></td></tr><tr><td style="font-size:10px;font-weight:bold;margin-top:-160px;margin-right:110px;" align="right">Page ( <pagenumber/> of <totalpages/> ) </td></tr></table> <div style="position:relative;top:-235px;bottom:-92px;left:483px;"><img src="https://system.eu2.netsuite.com/core/media/media.nl?id=9205&amp;c=4647359&amp;h=7003b6a4832399179079" style="width:100%;height:100%;" /></div>  ';
+    }
+    // if (subsidiary == '10' || subsidiary == '4' || subsidiary == '14') {
+    //     //xml += '<table style="width: 100%;"><tr><td><img src="https://system.eu2.netsuite.com/core/media/media.nl?id=1868&amp;c=4119372&amp;h=876d82fac1b9fb35842b" style="width:655px; height:94px;" /></td></tr><tr><td style="font-size:10px;font-weight:bold;" align="right">Page ( <pagenumber/> of <totalpages/> ) </td></tr></table>';
+    //     xml += '<table class="footer" style="width: 100%; margin-left:-45px; margin-right:-65px; margin-bottom:-115px;" ><tr><td align="right" style="margin-top:-13px;">&nbsp;( Page <pagenumber/> of <totalpages/> )</td></tr><tr><td><img src="https://system.eu2.netsuite.com/core/media/media.nl?id=57119&amp;c=4119372&amp;h=2dfb38b4fe1721c7c887" style="width:100%;height:100%;"/></td></tr></table>';
+    //     xml += '<div style="position:relative;top:-113px;bottom:-73px;left:520px;"><img src="https://system.eu2.netsuite.com/core/media/media.nl?id=57110&amp;c=4119372&amp;h=ed3bd4ef7eb629c77000" style="width:100%;height:100%;"/></div>';
+    // }
+    // if (subsidiary == '11') {
+    //     //xml += '<table style="width: 100%;"><tr><td><img src="https://system.eu2.netsuite.com/core/media/media.nl?id=1769&amp;c=4119372&amp;h=fa8458d8b40c0d67bbb6" style="width:655px; height:91px;" /></td></tr><tr><td style="font-size:10px;font-weight:bold;" align="right">Page ( <pagenumber/> of <totalpages/> ) </td></tr></table>';
+    // }
+    else {
+        xml += '<table style="width: 100%; margin-left:-50px; margin-right:-65px; margin-bottom: -255px;background-color:#000;margin-top:70px;"><tr><td><img src="https://system.eu2.netsuite.com/core/media/media.nl?id=9210&amp;c=4647359&amp;h=e6070c9cd462193b9b95" style="width:750px;height:40%;" /></td></tr><tr><td style="font-size:10px;font-weight:bold;margin-top:-160px;margin-right:110px;" align="right">Page ( <pagenumber/> of <totalpages/> ) </td></tr></table> <div style="position:relative;top:-235px;bottom:-92px;left:483px;"><img src="https://system.eu2.netsuite.com/core/media/media.nl?id=9205&amp;c=4647359&amp;h=7003b6a4832399179079" style="width:100%;height:100%;" /></div>  ';
+    }
+    xml += '</macro>';
+    xml += '</macrolist>';
+    xml += '</head>';
+    xml += '<body style="font-family:sans-serif;background-color:#ffffff;" header="myheader" header-height="14%" footer-height="9%" footer="myfooter" background-image-width="8.5in" background-image-position="bottom center" background-image-height="4in" size="Letter">';
+    //  xml += '<body style="font-family:sans-serif;" header="myheader" header-height="13%" footer="myfooter" footer-height="8%">';
+    xml += template;
+    xml += '</body>';
+    xml += '</pdf>';
+    var file = nlapiXMLToPDF(xml);
+    response.setContentType('PDF', 'DeliveryNotes.pdf', 'inline');
+    response.write(file.getValue());
+}
+
+function relaceCharector(charVal) {
+    return charVal.replace(/&/g, "&amp;");
+}
+
+function strReplace(str, replaceVal) {
+    var res = str.replace(replaceVal, "");
+    return res;
+}

@@ -1,0 +1,124 @@
+/**
+ * @NApiVersion 2.0
+ * @NScriptType UserEventScript
+ * @NModuleScope SameAccount
+ */
+define(['N/record', 'N/log', 'N/search', 'N/task', 'N/redirect', 'N/ui/serverWidget', 'N/error', 'N/format/i18n', 'N/url'],
+
+    function (record, log, search, task, redirect, serverWidget, error, format, url) {
+
+        /**
+         * Function definition to be triggered before record is loaded.
+         *
+         * @param {Object} scriptContext
+         * @param {Record} scriptContext.newRecord - New record
+         * @param {string} scriptContext.type - Trigger type
+         * @param {Form} scriptContext.form - Current form
+         * @Since 2015.2
+         */
+        function BeforeLoadAction(scriptContext) {
+            var curRec = scriptContext.newRecord;
+            var recId = scriptContext.newRecord.id;
+
+            log.debug("curRec", curRec);
+            log.debug("recId", recId);
+
+            var sub = curRec.getValue({
+                fieldId: 'subsidiary'
+            });
+            log.debug("sub", sub);
+            //    
+
+            if (scriptContext.type == "view") {
+                if (sub == '13' || sub == '1' || sub == '8' || sub == '22') {
+                    var recId = curRec.id;
+                    var recType = curRec.type;
+                    if (!((sub === "8" || sub === "16") && (location === "8" || location === "21"))) {
+                        scriptContext.form.addButton({
+                            id: 'custpage_print_pdf',
+                            label: 'Print',
+                            // functionName: 'window.open(\'/app/site/hosting/scriptlet.nl?script=2439&deploy=1&recordID=' + recId + '&recordType=' + recType + '&end=true\')'
+                            // functionName: 'window.open(\'/app/site/hosting/scriptlet.nl?script=2539&deploy=1&recordID=' + recId + '&recordType=' + recType + '&end=true\')'
+                            functionName: 'window.open(\'/app/site/hosting/scriptlet.nl?script=546&deploy=1&deploy=1&recordID=' + recId + '&recordType=' + recType + '&end=true\')'
+                        });
+                        scriptContext.form.addButton({
+                            id: 'custpage_print_pdf2',
+                            label: 'Print On Letterhead',
+                            // functionName: 'window.open(\'/app/site/hosting/scriptlet.nl?script=2440&deploy=1&recordID=' + recId + '&recordType=' + recType + '&end=true\')'
+                            // functionName: 'window.open(\'/app/site/hosting/scriptlet.nl?script=2540&deploy=1&recordID=' + recId + '&recordType=' + recType + '&end=true\')'
+                            functionName: 'window.open(\'/app/site/hosting/scriptlet.nl?script=547&deploy=1&recordID=' + recId + '&recordType=' + recType + '&end=true\')'
+                        });
+                    }
+
+
+                }
+
+
+            }
+
+
+
+
+
+
+
+        }
+
+
+
+
+
+
+
+        function capitalize(string, a) {
+
+            var tempstr = string.toLowerCase();
+
+            if (a == false || a == undefined)
+
+                return tempstr.replace(tempstr[0], tempstr[0].toUpperCase());
+
+            else {
+
+                return tempstr.split(" ").map(function (i) {
+
+                    return i[0].toUpperCase() + i.substring(1)
+
+                }).join(" ");
+
+            }
+
+        }
+
+
+
+        function strReplace(str) {
+
+            return str.replace(/,/g, "");
+
+        }
+
+
+
+        return {
+            beforeLoad: BeforeLoadAction,
+
+
+            // capitalize: capitalize
+
+        };
+
+    });
+
+
+
+
+
+
+
+
+
+
+
+
+

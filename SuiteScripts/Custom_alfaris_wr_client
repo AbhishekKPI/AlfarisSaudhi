@@ -1,0 +1,473 @@
+var pagettype = '';
+function pageinitWRAction(type) {
+  pagettype = type;
+  if (type == "create" || type == "copy") {
+    var customform = nlapiGetFieldValue('customform');
+          console.log("customform=====" + customform);
+
+    // if(customform==159){
+    //   nlapiSetFieldValue('custbody_record_type', 4);
+
+    // }
+    
+    var recodType = nlapiGetFieldValue('custbody_record_type');
+    if (recodType == 4 || recodType == 1 || recodType == 2 || recodType == 5) {
+      nlapiSetFieldDisplay("custbody_wr_project_status", false);
+      nlapiSetFieldDisplay("custbody_job_demand_bulletin", false);
+      nlapiSetFieldDisplay("custbody_work_order_open_list", false);
+    }
+
+
+
+    if (recodType == 1 || recodType == 4 || recodType == 5) {
+      var soDate = nlapiGetFieldValue('trandate');
+      console.log("soDate=====" + soDate);
+      nlapiSetFieldValue('custbody_wr_current_serv_date', soDate);
+    }
+  }
+  if (type == "create" || type == "copy" || type == "edit") {
+    var customform = nlapiGetFieldValue('customform');
+    var recodType = nlapiGetFieldValue('custbody_record_type');
+    if (recodType == 1 || recodType == 4 || recodType == 5) {
+      nlapiDisableField("job", true);
+    }
+
+  }
+  if (type == "edit") {
+    var role = nlapiGetRole();
+    var soRecType = nlapiGetFieldValue('custbody_record_type');
+    if (soRecType == 1 && role != 3) {
+      var endDate = nlapiGetFieldValue('custbody_custom_end_date');
+      if (endDate) {
+        nlapiDisableField("custbody_custom_end_date", true);
+      }
+    }
+
+
+    var customform = nlapiGetFieldValue('customform');
+    if (soRecType == 1) {
+      nlapiDisableField("customform", true);
+    }
+    else if (soRecType == 4) {
+      nlapiDisableField("customform", true);
+      nlapiDisableField("custbody_service_type", true);
+    }
+
+    try {
+      var workprocss = getParameterByNameinSO("processWR");
+      if (workprocss == 'T') {
+        nlapiSetFieldValue('custbody_process_work_request', 'T');
+      }
+    }
+    catch (err) {
+      nlapiLogExecution("DEBUG", "err----------------");
+    }
+  }
+}
+function fieldChangedWRAction(type, name) {
+
+
+  if (name == "entity" || name == "custbody_work_order_equipments" || name == "custbody_equipment_subsidiary") {
+    var soRecType = nlapiGetFieldValue('custbody_record_type');
+    if (soRecType == 1) {//	Work Request Crane Division
+      var equipID = nlapiGetFieldValue('custbody_work_order_equipments');
+      var customerID = nlapiGetFieldValue('entity');
+      var customerName = '';
+      var custFlag = false;
+      if (equipID && customerID) {
+        //var equipSubsidiary = nlapiLookupField('customrecord_ncfar_asset', equipID, 'custrecord_assetsubsidiary');
+        var equipSubsidiary = nlapiLookupField('customrecord_rent_asset', equipID, 'custrecord_rent_asset_subsidiary');
+        if (equipSubsidiary == 9 && customerID != 13920) {//AL FARIS HOLDING : CRANE DIVISION : AFER Dubai
+          custFlag = true;
+          customerName = "0412 Al Faris Equipment Rentals LLC";
+          customerID = 13920;
+        }
+        else if (equipSubsidiary == 14 && customerID != 13922) {//AL FARIS HOLDING : CRANE DIVISION : AFIHER Abu Dhabi
+          custFlag = true;
+          customerName = "0414 Al Faris International Heavy Equipment Rental";
+          customerID = 13922;
+        }
+        else if (equipSubsidiary == 12 && customerID != 13924) {//AL FARIS HOLDING : ENERGY DIVISION : AFER - Energy Division
+          custFlag = true;
+          customerName = "0416 Al Faris Equipment Rental LLC - Energy Division";
+          customerID = 13924;
+        }
+        else if (equipSubsidiary == 25 && customerID != 53875) {//iraq
+          custFlag = true;
+          customerName = "0419 Al Faris Equipment Rentals LLC - Iraq Division";
+          customerID = 53875;
+        }
+        if (custFlag == true) {
+          alert("Customer should be " + customerName + " for this Equipment subsidiary");
+          nlapiSetFieldValue('entity', customerID);
+        }
+      }
+    }
+  }
+
+
+
+  if (name == "custbody_custom_end_date") {
+    var startDate = nlapiGetFieldValue('custbody_custom_start_date');
+    var jobEndDate = nlapiGetFieldValue('custbody_custom_end_date');
+    var date1 = new Date(nlapiStringToDate(startDate, 'datetimetz'));
+    var date2 = new Date(nlapiStringToDate(jobEndDate, 'datetimetz'));
+    console.log("startDate=============" + startDate);
+    console.log("jobEndDate=============" + jobEndDate);
+    if (startDate && jobEndDate) {
+      var diff = date2.getTime() - date1.getTime();
+      var Hrs = diff / (1000 * 60 * 60);
+      var delta = Math.abs(date2 - date1) / 1000;
+      var daysDiff = Math.floor(delta / 86400);
+
+      var seconds = Math.floor((date2 - (date1)) / 1000);
+      var minutes = Math.floor(seconds / 60);
+      var hours = Math.floor(minutes / 60);
+      var days = Math.floor(hours / 24);
+
+      hours = hours - (days * 24);
+      minutes = minutes - (days * 24 * 60) - (hours * 60);
+      seconds = seconds - (days * 24 * 60 * 60) - (hours * 60 * 60) - (minutes * 60);
+
+
+      var compltdDays = days + " Days " + hours + " Hours " + minutes + " Minutes";
+      nlapiSetFieldValue('custbody_wr_completed_hours', Hrs.toFixed(2));
+      nlapiSetFieldValue('custbody_wr_compltd_dys', compltdDays);
+    }
+
+  }
+
+  if (name == "custbody3" || name == "custbody_custom_start_date") {
+    nlapiSetFieldValue('custbody2', '');
+    var startDate = nlapiGetFieldValue('custbody_custom_start_date');
+    var tendativeDay = nlapiGetFieldValue('custbody3');
+    var date1 = new Date(nlapiStringToDate(startDate, 'datetimetz'));
+    if (startDate && tendativeDay) {
+      var expectDate = nlapiAddDays(new Date(nlapiStringToDate(startDate, 'datetimetz')), tendativeDay);
+      nlapiSetFieldValue('custbody2', nlapiDateToString(expectDate));
+    }
+  }
+
+  if (name == "custbody_curr_carr_eng_hrs" || name == "custbody_last_carrier_engine_hrs") {
+    nlapiSetFieldValue('custbody_diff_carr_engine_hrs', '');
+
+    var customformID = nlapiGetFieldValue('customform');
+
+    var equipField='';
+    if(customformID==159 || customformID==160){//Energy Division SO
+      var equipField = 'custbody_ed_work_order_equipments';
+    }else{
+      var equipFieldOld = 'custbody_work_order_equipments';
+      var equipmentsOld = nlapiGetFieldValue(equipFieldOld);
+      if (equipmentsOld ) {
+        var currentCarrEngine = nlapiGetFieldValue('custbody_curr_carr_eng_hrs');
+        var lastCarrEngine = nlapiGetFieldValue('custbody_last_carrier_engine_hrs');
+        if (currentCarrEngine && lastCarrEngine) {
+          var diffCarrEngine = Math.abs(Number(currentCarrEngine) - Number(lastCarrEngine));
+          nlapiSetFieldValue('custbody_diff_carr_engine_hrs', diffCarrEngine);
+        }
+      }
+      var equipField = 'custbody_ed_work_order_equipments';
+    }
+
+    var equipments = nlapiGetFieldValue(equipField);
+    if (equipments ) {
+      var currentCarrEngine = nlapiGetFieldValue('custbody_curr_carr_eng_hrs');
+      var lastCarrEngine = nlapiGetFieldValue('custbody_last_carrier_engine_hrs');
+      if (currentCarrEngine && lastCarrEngine) {
+        var diffCarrEngine = Math.abs(Number(currentCarrEngine) - Number(lastCarrEngine));
+        nlapiSetFieldValue('custbody_diff_carr_engine_hrs', diffCarrEngine);
+      }
+    }
+
+  }
+
+
+  if (name == "custbody_curr_top_engine_hrs" || name == "custbody_last_top_engine_hrs") {
+    nlapiSetFieldValue('custbody_diff_top_engine_hrs_kms', '');
+
+    var customformID = nlapiGetFieldValue('customform');
+
+    var equipField='';
+    if(customformID==159 || customformID==160){//Energy Division SO
+      var equipField = 'custbody_ed_work_order_equipments';
+    }else{
+      var equipFieldOld = 'custbody_work_order_equipments';
+      var equipmentsOld = nlapiGetFieldValue(equipFieldOld);
+      if (equipmentsOld ) {
+        var currentTopEngine = nlapiGetFieldValue('custbody_curr_top_engine_hrs');
+      var lastTopEngine = nlapiGetFieldValue('custbody_last_top_engine_hrs');
+      if (currentTopEngine && lastTopEngine) {
+        var diffTopEngine = Math.abs(Number(currentTopEngine) - Number(lastTopEngine));
+        nlapiSetFieldValue('custbody_diff_top_engine_hrs_kms', diffTopEngine);
+      }
+      }
+      var equipField = 'custbody_ed_work_order_equipments';
+    }
+
+    var equipments = nlapiGetFieldValue(equipField);
+    if (equipments) {
+      var currentTopEngine = nlapiGetFieldValue('custbody_curr_top_engine_hrs');
+      var lastTopEngine = nlapiGetFieldValue('custbody_last_top_engine_hrs');
+      if (currentTopEngine && lastTopEngine) {
+        var diffTopEngine = Math.abs(Number(currentTopEngine) - Number(lastTopEngine));
+        nlapiSetFieldValue('custbody_diff_top_engine_hrs_kms', diffTopEngine);
+      }
+    }
+  }
+
+  if (name == "custbody_current_kms" || name == "custbody_last_kms") {
+    nlapiSetFieldValue('custbody_diff_kms', '');
+
+    var customformID = nlapiGetFieldValue('customform');
+
+    var equipField='';
+    if(customformID==159 || customformID==160){//Energy Division SO
+      var equipField = 'custbody_ed_work_order_equipments';
+    }else{
+      var equipFieldOld = 'custbody_work_order_equipments';
+      var equipmentsOld = nlapiGetFieldValue(equipFieldOld);
+      if (equipmentsOld ) {
+        var currentKms = nlapiGetFieldValue('custbody_current_kms');
+        var lastKms = nlapiGetFieldValue('custbody_last_kms');
+        if (currentKms && lastKms) {
+          var diffKms = Math.abs(Number(currentKms) - Number(lastKms));
+          nlapiSetFieldValue('custbody_diff_kms', diffKms);
+        }
+      }
+      var equipField = 'custbody_ed_work_order_equipments';
+    }
+
+    var equipments = nlapiGetFieldValue(equipField);
+    if (equipments) {
+      var currentKms = nlapiGetFieldValue('custbody_current_kms');
+      var lastKms = nlapiGetFieldValue('custbody_last_kms');
+      if (currentKms && lastKms) {
+        var diffKms = Math.abs(Number(currentKms) - Number(lastKms));
+        nlapiSetFieldValue('custbody_diff_kms', diffKms);
+      }
+    }
+  }
+
+  if (name == "custbody_work_order_equipments" || name == "trandate" || name == "custbody_ed_work_order_equipments") {
+    if (pagettype == "create" || pagettype == "copy") {
+      var customformID = nlapiGetFieldValue('customform');
+
+      var equipFieldName='';
+      if(customformID==159 || customformID==160){//Energy Division SO
+        var equipFieldName = 'custbody_ed_work_order_equipments';
+      }else{
+        if(name == "custbody_ed_work_order_equipments"){
+          var equipFieldName = 'custbody_ed_work_order_equipments';
+        }else{
+          var equipFieldName = 'custbody_work_order_equipments';
+
+        }
+      }
+
+      var equipments = nlapiGetFieldValue(equipFieldName);
+
+
+      var trandate = nlapiGetFieldValue('trandate');
+      if (equipments && trandate) {
+        var soCount = 0;
+        //if (nlapiGetContext().getUser() == 126567) {
+        var col = new Array();
+        var ftr = new Array();
+        col[0] = new nlobjSearchColumn("internalid", "", "COUNT");
+        ftr[0] = new nlobjSearchFilter("type", null, 'anyof', 'SalesOrd');
+        ftr[1] = new nlobjSearchFilter("custbody_record_type", null, 'anyof', [1, 4]);
+        ftr[2] = new nlobjSearchFilter(equipFieldName, null, 'anyof', equipments);
+        ftr[3] = new nlobjSearchFilter("mainline", null, 'is', 'T');
+        ftr[4] = new nlobjSearchFilter("trandate", null, 'on', trandate);
+       // ftr[5] = new nlobjSearchFilter("custbody_equipment_status", null, 'anyof', 4);
+        ftr[5] = new nlobjSearchFilter("custbody_custom_approval_status", null, 'anyof', 1);
+        var woRes = nlapiSearchRecord('salesorder', null, ftr, col);
+        if (woRes) {
+          soCount = woRes[0].getValue('internalid', "", "COUNT");
+        }
+        // }
+        console.log("soCount==============" + soCount);
+       // var equipStatus = nlapiGetFieldValue("custbody_equipment_status");
+        //if (soCount > 0 && equipStatus != 2) {
+        if (soCount > 0) {
+          alert("Multiple Work Request cannot be created using the same equipment on same date !");
+          nlapiSetFieldValue(equipFieldName, '');
+        }
+      }
+      if (equipments) {
+        var eqStatus = nlapiLookupField('customrecord_rent_asset', nlapiGetFieldValue(equipFieldName), 'custrecord_rent_asset_status');
+
+        if(customformID==159 || customformID==160){//Energy Division SO
+          nlapiSetFieldValue('custbody_ed_equipment_status', eqStatus);
+        }else{
+          nlapiSetFieldValue('custbody_ed_equipment_status', eqStatus);
+        }
+        //nlapiSetFieldValue('custbody_wr_so_equipment_status', eqStatus);
+
+        if (eqStatus == 9) {
+          alert("The Equipment Status is Breakdown hence cannot proceed with Work Request");
+          nlapiSetFieldValue(equipFieldName, '');
+        }
+      }
+    }
+  }
+
+  if (name == "custbody_wr_current_run_hrs_kms" || name == "custbody_run_hrs_kms" || name == "custbody_ed_run_hrs_kms") {
+    var customformID = nlapiGetFieldValue('customform');
+
+    var lastRunHrs='';
+    if(customformID==159 || customformID==160){//Energy Division SO
+      var lastRunHrs = nlapiGetFieldValue('custbody_ed_run_hrs_kms');
+    }else{
+      var lastRunHrs = nlapiGetFieldValue('custbody_run_hrs_kms');
+    }
+
+    var currentRunHrs = nlapiGetFieldValue('custbody_wr_current_run_hrs_kms');
+
+    if (Number(currentRunHrs) && Number(lastRunHrs)) {
+      if (Number(currentRunHrs) < Number(lastRunHrs)) {
+        alert("current km/hr field should not take below/ less than km/ hrs reading compare to last kms/ hrs");
+        nlapiSetFieldValue('custbody_wr_current_run_hrs_kms', '');
+        nlapiSetFieldValue('custbody_wr_diff_run_hrs_kms', '');
+      } else {
+        var differ = Math.abs(Number(currentRunHrs) - Number(lastRunHrs));
+        nlapiSetFieldValue('custbody_wr_diff_run_hrs_kms', differ);
+      }
+    }
+  }
+
+  if (name == "custbody_wr_back_date") {
+    var backDate = nlapiGetFieldValue('custbody_wr_back_date');
+
+    var customformID = nlapiGetFieldValue('customform');
+
+    var curservDateField='';
+    if(customformID==159 || customformID==160){//Energy Division SO
+      var curservDateField = 'custbody_ed_wr_current_serv_date';
+    }else{
+      var curservDateField = 'custbody_wr_current_serv_date';
+    }
+
+    var today = new Date();
+    if (backDate == "T") {
+      var backDat = nlapiAddDays(today, -1);
+      nlapiSetFieldValue('trandate', nlapiDateToString(backDat));
+      nlapiSetFieldValue(curservDateField, nlapiDateToString(backDat));
+    } else {
+      nlapiSetFieldValue('trandate', nlapiDateToString(today));
+      nlapiSetFieldValue(curservDateField, nlapiDateToString(today));
+    }
+  }
+
+
+  // if (name == "trandate") {
+  //   var backDate = nlapiGetFieldValue('custbody_wr_back_date');
+  // }
+
+
+  if (type == "item" && name == "custcol_margin") {
+    var margin = nlapiGetCurrentLineItemValue('item', 'custcol_margin');
+    var oldRate = nlapiGetCurrentLineItemValue('item', 'custcol_custom_rate');
+    var projectCost = nlapiGetCurrentLineItemValue('item', 'custcol_project_cost');
+    if (projectCost) {
+      margin = parseFloat(margin.replace(/[^0-9. ]/g, ""));
+      if (margin > 0) {
+        discountCalculation();
+      }
+      else {
+        nlapiSetCurrentLineItemValue('item', 'rate', oldRate);
+        nlapiSetCurrentLineItemValue('item', 'custcol_margin_discount_amnt', '');
+      }
+    }
+  }
+  if (type == "item" && name == "custcol_custom_rate") {
+    var oldRate = nlapiGetCurrentLineItemValue('item', 'custcol_custom_rate');
+    var margin = nlapiGetCurrentLineItemValue('item', 'custcol_margin');
+    var projectCost = nlapiGetCurrentLineItemValue('item', 'custcol_project_cost');
+    if (projectCost) {
+      margin = parseFloat(margin.replace(/[^0-9. ]/g, ""));
+      if (margin > 0) {
+        discountCalculation();
+      }
+      else {
+        nlapiSetCurrentLineItemValue('item', 'rate', oldRate);
+        nlapiSetCurrentLineItemValue('item', 'custcol_margin_discount_amnt', '');
+      }
+    }
+  }
+}
+function lineInitWRAction() {
+  disableRateField();
+}
+function postSourcingWRAction(type, name) {
+  disableRateField();
+  if (type == "item" && name == "item") {
+    var nsRate = nlapiGetCurrentLineItemValue("item", "rate");
+    nlapiSetCurrentLineItemValue("item", "custcol_custom_rate", nsRate);
+  }
+}
+function disableRateField() {
+  nlapiDisableLineItemField('item', 'custcol_custom_rate', true);
+}
+function validateWRLineAction(type) {
+  var customform = nlapiGetFieldValue('customform');
+  var soRecType = nlapiGetFieldValue('custbody_record_type');
+  if (soRecType == 1) {
+    if (pagettype == "edit") {
+      if (type == "item") {
+        var createproject = nlapiGetCurrentLineItemValue("item", "custcol_create_project");
+        var remarks = nlapiGetCurrentLineItemValue("item", "custcol_remarks");
+        var lineNumber = nlapiGetCurrentLineItemIndex("item");
+        if (lineNumber != 1) {
+          if (createproject == "F") {
+            if (remarks == '' || remarks == null) {
+              alert("Please enter remarks");
+              return false;
+            }
+          }
+        }
+      }
+    }
+  }
+  else if (soRecType == 4) {
+    if (type == "item") {
+      var createproject = nlapiGetCurrentLineItemValue("item", "custcol_create_project");
+      var remarks = nlapiGetCurrentLineItemValue("item", "custcol_remarks");
+      var lineNumber = nlapiGetCurrentLineItemIndex("item");
+      if (createproject == "F") {
+        if (remarks == '' || remarks == null) {
+          alert("Please enter remarks");
+          return false;
+        }
+      }
+    }
+  }
+  return true;
+}
+function discountCalculation() {
+  var perc = nlapiGetCurrentLineItemValue("item", "custcol_margin");
+  var price = nlapiGetCurrentLineItemValue("item", "custcol_project_cost");
+  var result = 0;
+  var temp = perc;
+  var totalCost = 0;
+  if (perc.includes("%")) {
+    perc = parseFloat(perc.replace(/[^0-9. ]/g, ""));
+    result = (price * perc) / 100;
+    totalCost = Number(price) + Number(result);
+    nlapiSetCurrentLineItemValue("item", "custcol_margin_discount_amnt", result);
+  }
+  if (temp.includes("%")) {
+    var rate = totalCost;
+  }
+  nlapiSetCurrentLineItemValue("item", "rate", rate, false, false);
+}
+function getParameterByNameinSO(name) {
+  var url = window.location.href;
+  name = name.replace(/[\[\]]/g, "\\$&");
+  var regex = new RegExp("[?&]" + name + "(=([^&#]*)|&|#|$)"),
+    results = regex.exec(url);
+  if (!results) return null;
+  if (!results[2]) return '';
+  return decodeURIComponent(results[2].replace(/\+/g, " "));
+}
