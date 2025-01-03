@@ -1,0 +1,9 @@
+function pageInitAction(type) {
+	var myTD=document.getElementById('tbl_submitter');
+	myTD.parentNode.removeChild(myTD);
+	var myTD=document.getElementById('tbl__cancel');
+	myTD.parentNode.removeChild(myTD);
+	var myTD=document.getElementById('tbl_resetter');
+	myTD.parentNode.removeChild(myTD);
+
+}

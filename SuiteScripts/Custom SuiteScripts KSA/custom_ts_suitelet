@@ -1,0 +1,188 @@
+function timesheetStagesAction(request, response) {	
+	var form = nlapiCreateForm('Timesheet Status');
+		
+	//form.addSubmitButton("Filter By Status");	
+	//form.addButton("custpage_filterbtn", "Filter By Status", 'redirection(1)');
+	form.setScript('customscriptcustom_ts_setscript_client'); 	
+	if (request.getMethod() == 'GET') {		
+		form.addSubmitButton("Filter By Status");
+		var kk = form.addField("custpage_ts_status", "select", "Timesheet Status", "customlist_timesheet_dynamic_status");
+		//kk.setMandatory(true);
+		var aa = form.addField("custpage_ts_status_txt", "text","TimmeSheet Status Text", "customlist_timesheet_dynamic_status");
+		aa.setDisplayType("hidden");
+		form.addField("custpage_ts_startdate", "date","Start Date");		
+		
+		
+		//User Subsidiary wise Filtering
+		var currentContext = nlapiGetContext(); 
+		var subsidiary = currentContext.getSubsidiary();
+		var roleInternalId = currentContext.getRole();
+		var empID = currentContext.getUser();
+		var filter = [["internalid","anyof",empID],'AND',["role.internalid","anyof",roleInternalId]];
+		var res  = nlapiSearchRecord("employee", "customsearchemp_role_subsidiaries",filter);	
+		var nFilter = '';
+		var cnt = 1;		
+		if(roleInternalId != 3){
+			var bb = form.addField("custpage_ts_subsidiary", "select", "Subsidiary");
+			bb.addSelectOption("","");
+		
+		if(res){
+			for(var i=0;i<res.length;i++){	
+				bb.addSelectOption(res[i].getValue("subsidiaries","role"),res[i].getText("subsidiaries","role"));
+				nFilter += '["custrecord_timesheet_subsidiary","is","'+res[i].getText("subsidiaries","role")+'"]';
+				if(cnt < res.length){nFilter += ',"OR",';}
+				cnt++;
+			}
+		}			
+		var arr = eval('[' + nFilter + ']');
+		}
+		var srchRes = '';
+		if(roleInternalId == 3){
+			var bb = form.addField("custpage_ts_subsidiary", "select", "Subsidiary","subsidiary");
+			
+			 srchRes = nlapiSearchRecord('customrecord_time_sheet_header', 'customsearchtimesheet_stages_update');
+		}else{
+			srchRes = nlapiSearchRecord('customrecord_time_sheet_header', 'customsearchtimesheet_stages_update',arr);
+		}
+			
+		var ff = form.addField("custpage_ts_filter", "textarea", "filter");
+		ff.setDefaultValue(nFilter);
+		ff.setDisplayType("hidden");
+		
+		var no = 0;
+		var notesArray = new Array();
+		if(srchRes){
+			for(var i = 0;i<srchRes.length;i++){		
+				notesArray[no] = {'custpage_startdate':srchRes[i].getValue("custrecord_timesheet_start_date"),'custpage_item':srchRes[i].getValue("custrecord_timesheet_resource"),'custpage_unit':srchRes[i].getValue("custrecord_timesheet_item_unit"),'custpage_ts_status':srchRes[i].getText("custrecord_timesheet_status"),'custpage_customer':srchRes[i].getValue("custrecord_timesheet_customer"),'custpage_internalid':srchRes[i].getValue("internalid"),'custpage_ets_no':srchRes[i].getValue("custrecord_custom_ets_no"),'custpage_subsidiary':srchRes[i].getValue("custrecord_timesheet_subsidiary"),'custpage_ts_sites':srchRes[i].getValue("custrecord_timesheet_sitedetails"),'custpage_ts_remarks':srchRes[i].getValue("custrecord_timesheet_remarks")};
+				no++;
+			}
+		}
+		
+		var mainTab = form.addTab('custpage_offshore_tab', 'Time Sheets');
+		//Add a subtab to the first tab
+	    var notesSubTab = form.addSubTab('custpage_notes_subtab', 'Time Sheets','custpage_offshore_tab');
+	    var notesSublist = form.addSubList('custpage_notes_sublist','list','', 'custpage_notes_subtab');
+	   // notesSublist.addField('custpage_chkbx','checkbox', '#');
+	    notesSublist.addField('custpage_internalid','text', 'InternalID').setDisplayType('hidden' );	    
+	    notesSublist.addField('custpage_ets_no','text', 'Timesheet #');
+	    notesSublist.addField('custpage_startdate','date', 'Start Date');  
+	    notesSublist.addField('custpage_item','text', 'Resource'); 
+	    notesSublist.addField('custpage_unit','text', 'Unit'); 
+	    notesSublist.addField('custpage_ts_status','text', 'Time Sheet Status'); 
+	    notesSublist.addField('custpage_customer','text', 'Customer'); 	   
+	    notesSublist.addField('custpage_subsidiary','text', 'Subsidiary');
+		notesSublist.addField('custpage_ts_sites','text', 'Site Details');
+	    notesSublist.addField('custpage_ts_remarks','text', 'Remarks');
+	    notesSublist.setLineItemValues(notesArray);	
+	    
+	    var mainTab = form.addTab('custpage_offshore_tab1', '');
+	  //Add a second subtab to the first tab
+	    var inclustionSubTab = form.addSubTab('custpage_inclusion_subtab', 'Notes','custpage_offshore_tab1');
+	    var inclusionSublist = form.addSubList('custpage_inclusion_sublist','list','', 'custpage_inclusion_subtab');
+	  
+	}
+	if (request.getMethod() == 'POST') {	
+			
+		var statusText = request.getParameter("custpage_ts_status_txt");
+		var status = request.getParameter("custpage_ts_status");
+		var subsidiary = request.getParameter("custpage_ts_subsidiary");
+		var filetrText = request.getParameter("custpage_ts_filter");
+		var startdate =  request.getParameter("custpage_ts_startdate");
+		var filter = '';
+		if(subsidiary != ""){
+			var subData = nlapiLoadRecord("subsidiary", subsidiary);
+			var subName = subData.getFieldValue("name");
+			filter = ["custrecord_timesheet_subsidiary","is",subName];
+			if(startdate){
+				filter = [["custrecord_timesheet_subsidiary","is",subName],"AND",["custrecord_timesheet_start_date","on",startdate]];
+			}			
+			if(status){
+				filter = [["custrecord_timesheet_status","anyof",status],'AND',["custrecord_timesheet_subsidiary","is",subName]];
+				if(startdate){
+					filter = [["custrecord_timesheet_status","anyof",status],'AND',["custrecord_timesheet_subsidiary","is",subName],"AND",["custrecord_timesheet_start_date","on",startdate]];
+				}
+			}
+		}else{
+			if(filetrText){
+				var nfilter = '["custrecord_timesheet_status","anyof","'+status+'"],"AND",'+filetrText;
+				if(startdate){
+					var nfilter = '["custrecord_timesheet_status","anyof","'+status+'"],"AND",["custrecord_timesheet_start_date","on","'+startdate+'"],"AND",'+filetrText;
+				}
+				var arr = eval('[' + nfilter + ']');
+				filter = arr;
+			}else if(status){
+				filter = ["custrecord_timesheet_status","anyof",status];
+				if(startdate){
+					filter = [["custrecord_timesheet_status","anyof",status],"AND",["custrecord_timesheet_start_date","on",startdate]];
+				}
+			}else{filter = [];
+			if(startdate){
+				filter = ["custrecord_timesheet_start_date","on",startdate];
+			}}
+			
+		}
+		var srchRes = nlapiSearchRecord('customrecord_time_sheet_header', 'customsearchtimesheet_stages_update',filter);
+		var no = 0;
+		var notesArray = new Array();
+		
+		if(srchRes){
+			for(var i = 0;i<srchRes.length;i++){		
+				notesArray[no] = {'custpage_startdate':srchRes[i].getValue("custrecord_timesheet_start_date"),'custpage_item':srchRes[i].getValue("custrecord_timesheet_resource"),'custpage_unit':srchRes[i].getValue("custrecord_timesheet_item_unit"),'custpage_ts_status':srchRes[i].getText("custrecord_timesheet_status"),'custpage_customer':srchRes[i].getValue("custrecord_timesheet_customer"),'custpage_internalid':srchRes[i].getValue("internalid"),'custpage_ets_no':srchRes[i].getValue("custrecord_custom_ets_no"),'custpage_subsidiary':srchRes[i].getValue("custrecord_timesheet_subsidiary"),'custpage_ts_sites':srchRes[i].getValue("custrecord_timesheet_sitedetails"),'custpage_ts_remarks':srchRes[i].getValue("custrecord_timesheet_remarks")};
+				no++;
+			}
+		}
+		
+		var mainTab = form.addTab('custpage_offshore_tab', 'Time Sheets');
+		//Add a subtab to the first tab
+	    var notesSubTab = form.addSubTab('custpage_notes_subtab', 'Time Sheets','custpage_offshore_tab');
+	    var notesSublist = form.addSubList('custpage_notes_sublist','list','', 'custpage_notes_subtab');
+	    form.addButton("custpage_backtopage_btn", "Back", 'backToMainpage()');
+	   if(status == 2 || status == 3 || status == 4 || status == 6 ||  status == 8 || status == 9 || status == 10 ){	  
+	    	notesSublist.addField('custpage_chkbx','checkbox', '#');
+	    	form.addButton("custpage_posting_btn", "Submit", 'statusChangingAction()');//("Save To Next");
+	    	
+	    	var cc = form.addField("custpage_ts_post", "text","TS Post Action");
+	    	cc.setDefaultValue(status);	  
+	    	cc.setDisplayType("hidden");
+	    	var selectBx = form.addField('custpage_move_status','select', 'Move To');
+selectBx.addSelectOption('','');
+			selectBx.addSelectOption("2","Printed / Dispatched");
+	    	selectBx.addSelectOption("3","At Site / With Operators");
+	    	selectBx.addSelectOption("4","Dispatch In");
+	    	selectBx.addSelectOption("5","Billing");
+	    	selectBx.addSelectOption("6","Postponed");
+	    	selectBx.addSelectOption("7","Cancelled");
+	    	selectBx.addSelectOption("8","Given to Sales person");
+	    	selectBx.addSelectOption("9","Duplicate");
+	    	selectBx.addSelectOption("10","First Timesheet received");
+	    	selectBx.setMandatory(true);
+			/* var ll = form.addField("custpage_move_status", "select","Move To","customlist_timesheet_dynamic_status");
+	    	ll.setMandatory(true);  */
+			
+	    	//cc.setDisplayType("hidden");
+	    }
+	    notesSublist.addField('custpage_internalid','text', 'InternalID').setDisplayType('hidden' );	    
+	    notesSublist.addField('custpage_ets_no','text', 'Timesheet #');
+	    notesSublist.addField('custpage_startdate','date', 'Start Date');  
+	    notesSublist.addField('custpage_item','text', 'Resource'); 
+	    notesSublist.addField('custpage_unit','text', 'Unit'); 
+	    notesSublist.addField('custpage_ts_status','text', 'Time Sheet Status'); 
+	    notesSublist.addField('custpage_customer','text', 'Customer');	
+	    notesSublist.addField('custpage_subsidiary','text', 'Subsidiary');
+		notesSublist.addField('custpage_ts_sites','text', 'Site Details');
+	    notesSublist.addField('custpage_ts_remarks','text', 'Remarks');
+	    notesSublist.setLineItemValues(notesArray);	
+	    
+	    var mainTab = form.addTab('custpage_offshore_tab1', '');
+	  //Add a second subtab to the first tab
+	    var inclustionSubTab = form.addSubTab('custpage_inclusion_subtab', 'Notes','custpage_offshore_tab1');
+	    var inclusionSublist = form.addSubList('custpage_inclusion_sublist','list','', 'custpage_inclusion_subtab');
+	  
+		//form.addField(name, type, label, sourceOrRadio, tab);
+		//var a = form.addField("custpage_ts_status", "inlinehtml", "Time Sheet Status");
+		//a.setDefaultValue(status);
+		//nlapiSetFieldValue("custpage_ts_status", status);
+		
+	}
+	response.writePage(form);
+}

@@ -1,0 +1,430 @@
+    function printAction(request, response){
+      var renderer = nlapiCreateTemplateRenderer();
+      var recID = request.getParameter('recId');
+      var renderer = nlapiCreateTemplateRenderer();
+      var res = nlapiLoadRecord("purchaserequisition", recID);
+      //nlapiLogExecution("debug","res",res);
+      var companyInfo = nlapiLoadConfiguration('companyinformation');
+      //nlapiLogExecution("debug","companyInfo",companyInfo);
+      var sb_recId = res.getFieldValue('subsidiary'); //here it is 34 to
+      var subsidiary_rec =  nlapiLoadRecord('subsidiary',sb_recId);
+      //nlapiLogExecution("debug","subsidiary_rec",subsidiary_rec);
+      var entity = res.getFieldValue("entity");
+      var entityRec = nlapiLoadRecord("employee",entity);
+      var userInfo = nlapiLoadConfiguration('userpreferences');
+        
+        var filters = [['internalid','anyof',recID]];
+        var system_notes = nlapiSearchRecord("transaction","customsearch_api_itemreceipt_system_note",filters);
+        var created_by = "";
+        var empid ="";
+        var created_by_name="";
+        if(system_notes){
+            for(var i=0;i<system_notes.length;i++){
+                if(system_notes[i].getValue("type","systemNotes")=="Create"){
+                created_by = system_notes[i].getText("name","systemNotes");
+                empid = system_notes[i].getValue("name","systemNotes");
+                break;
+                }
+            }
+            var empRec = nlapiLoadRecord("employee",empid);
+            nlapiLogExecution("debug","created_by",created_by);
+            nlapiLogExecution("debug","created_by name",empRec.getFieldValue("firstname")+" "+empRec.getFieldValue("lastname"));
+            
+            if(empRec.getFieldValue("firstname"))
+                created_by_name=empRec.getFieldValue("firstname")+" ";
+            if(empRec.getFieldValue("lastname"))
+                created_by_name +=empRec.getFieldValue("lastname");
+        }       
+
+    var template = '';
+    template +='<?xml version="1.0"?>\
+    <!DOCTYPE pdf PUBLIC "-//big.faceless.org//report" "report-1.1.dtd">\
+    <pdf>\
+        <head>\
+            <#if .locale=="ru_RU">\
+                <link name="verdana" type="font" subtype="opentype" src="${nsfont.verdana}" src-bold="${nsfont.verdana_bold}" bytes="2" />\
+            </#if>\
+            <macrolist>\
+                <macro id="nlheader">';
+                //template +='<p>sb_recId '+sb_recId +" " +subsidiary_rec.getFieldValue("logo")+'</p>';
+                     template +='<table class="header" style="width: 100%;">\
+                        <tr>\
+                            <td valign="bottom" align="left" width="15%">';
+                            //if(subsidiary_rec.getFieldValue("logoUrl")){
+                                template +='<img src="https://system.eu2.netsuite.com/core/media/media.nl?id=402&amp;c=4119372&amp;h=750acd92c3c49871331f" style="float: left; margin: 7px; width:50%; height: 50%;" />';
+                            //}
+                          template +='</td>\
+                            <td valign="bottom" align="left" width="40%">';
+                            if(subsidiary_rec.getFieldValue("name")){
+                                template +='<span class="nameandaddress" style="font-weight: bold;"><big>'+relaceCharector(subsidiary_rec.getFieldValue("name"))+'</big></span>';
+                            }                            
+                                template +='<small>\
+                                    <br/>';
+                                    if(subsidiary_rec.getFieldValue("fax")){
+                                        template +='<br/>Landline : '+relaceCharector(subsidiary_rec.getFieldValue("fax"));
+                                    }
+                                    if(subsidiary_rec.getFieldValue("email")){
+                                        template +='<br/>E-mail : '+relaceCharector(subsidiary_rec.getFieldValue("email"));
+                                    }
+                                    if(subsidiary_rec.getFieldValue("url")){
+                                        template +='<br/>Web : '+relaceCharector(subsidiary_rec.getFieldValue("url"));
+                                    }
+                                    if(subsidiary_rec.getFieldValue("employerid")){
+                                        template +='<br/>VAT : '+relaceCharector(subsidiary_rec.getFieldValue("employerid"));
+                                    }
+                                template +='</small>\
+                            </td>\
+                            <td valign="bottom" align="right" width="45%">\
+                                <p class="alignL" style="font-size: 8pt;">';
+                                if(subsidiary_rec.getFieldValue("addr1")){
+                                    template +=relaceCharector(subsidiary_rec.getFieldValue("addr1"));
+                                }
+                                if(subsidiary_rec.getFieldValue("addr2")){
+                                    template +='<br/>'+relaceCharector(subsidiary_rec.getFieldValue("addr2"));
+                                }
+                                if(subsidiary_rec.getFieldValue("city")){
+                                    template +='<br/>'+relaceCharector(subsidiary_rec.getFieldValue("city"));
+                                }
+                                if(subsidiary_rec.getFieldValue("country")){
+                                    template +='<br/>'+relaceCharector(subsidiary_rec.getFieldText("country"))+'</p>';
+                                }
+
+                            template +='</td>\
+                        </tr>\
+                    </table>';
+                template +='</macro>\
+                <macro id="nlfooter">\
+                    <table class="footer" style="width: 100%;">\
+                        <tr><!--<td align="left"><barcode codetype="code128" showtext="true" value="${record.tranid}"/></td>--><td align="right"><pagenumber/> of <totalpages/></td></tr>\
+                    </table>\
+                </macro>\
+            </macrolist>\
+            <style type="text/css">\
+            span,table {\
+                <#if .locale=="zh_CN">font-family: stsong, sans-serif;\
+                <#elseif .locale=="zh_TW">font-family: msung, sans-serif;\
+                <#elseif .locale=="ja_JP">font-family: heiseimin, sans-serif;\
+                <#elseif .locale=="ko_KR">font-family: hygothic, sans-serif;\
+                <#elseif .locale=="ru_RU">font-family: verdana;\
+                <#else>font-family: sans-serif;\
+                </#if>font-size: 9pt;\
+                table-layout: fixed;\
+            }\
+            th {\
+                font-weight: bold;\
+                font-size: 8pt;\
+                vertical-align: middle;\
+                padding: 5px 6px 3px;\
+                /*background-color: #e3e3e3;\
+                color: #333333;*/\
+            }\
+            td {\
+                padding: 4px 6px;\
+            }\
+            b {\
+                font-weight: bold;\
+                color: #333333;\
+            }\
+           table.header td {\
+                padding: 0;\
+                font-size: 10pt;\
+            }\
+           table.footer td {\
+                padding: 0;\
+                font-size: 8pt;\
+            }\
+            table.itemtable th {\
+                padding-bottom: 10px;\
+                padding-top: 10px;\
+            }\
+            .itemtable{\
+                     font-size: 8.5pt !important;\
+                     border: 0.5px solid #000000;\
+                }\
+            table.body td {\
+                padding-top: 2px;\
+            }\
+            table.total {\
+                page-break-inside: avoid;\
+            }\
+           tr.totalrow {\
+                background-color: #e3e3e3;\
+                line-height: 200%;\
+            }\
+            td.totalboxtop {\
+                font-size: 12pt;\
+                background-color: #e3e3e3;\
+            }\
+            td.addressheader {\
+                font-size: 8pt;\
+                padding-top: 6px;\
+                padding-bottom: 2px;\
+            }\
+            td.address {\
+                padding-top: 0;\
+            }\
+            td.totalboxmid {\
+                font-size: 28pt;\
+                padding-top: 20px;\
+                background-color: #e3e3e3;\
+            }\
+            td.totalboxbot {\
+                background-color: #e3e3e3;\
+                font-weight: bold;\
+            }\
+            span.title {\
+                font-size: 28pt;\
+                text-align:center\
+            }\
+            span.number {\
+                font-size: 16pt;\
+            }\
+            span.itemname {\
+                font-weight: bold;\
+                line-height: 150%;\
+            }\
+            hr {\
+                width: 100%;\
+                color: #d3d3d3;\
+                background-color: #d3d3d3;\
+                height: 1px;\
+            }\
+            table.nospacing tr td {\
+                padding: 0px;\
+            }\
+            table.smalltext tr td{\
+                font-size: 8pt;\
+            }\
+            p.alignL{\
+                text-align: left;\
+            }\
+            table.lnhght td{\
+                line-height:16;\
+            }\
+            .row_head{\
+                font-size: 8pt !important;\
+            }\
+            .td_right_line{\
+            /*border-right: 0.5px solid #f4f4f4;*/\
+             border-right :0.5px solid #000000;            \
+            }\
+            .td_bottom_line{\
+            border-bottom: 0.5px solid #000000;\
+            }\
+            .td_top_line{\
+            /*border-top :0.5px solid #f4f4f4;*/\
+             border-top :0.5px solid #000000;\
+            }\
+            .title{\
+            font-weight: bold;\
+            align:center!important;\
+            font-size:16pt;\
+            line-height: 150%;\
+            }\
+        </style>\
+        </head>\
+        <body header="nlheader" header-height="12%" footer="nlfooter" footer-height="20pt" padding="0.25in 0.5in 0.25in 0.5in" size="Letter">';
+            template+='<table class="nospacing lnhght" style="width: 100%;">\
+            <tr><td colspan="2" align="center" class="title">PURCHASE REQUEST: ${record.tranid}<br/><br/></td></tr>\
+                <tr>\
+                    <td>\
+                        <table>';
+                           /* <tr>\
+                                <td width="25%" style="font-weight: bold;">Vendor Contact</td>\
+                                <td align="center" width="4%">&nbsp;&nbsp;:&nbsp;&nbsp;</td>\
+                                <td>${record.custbody_interior_primary_contact}</td>\
+                            </tr>\*/
+                            /**/
+                            template +='<tr>\
+                                <td width="25%" style="font-weight: bold;"><p class="alignL">PR #</p></td>\
+                                <td align="center" width="4%">&nbsp;&nbsp;:&nbsp;&nbsp;</td>\
+                                <td><p class="alignL">'+relaceCharector(res.getFieldValue('tranid'))+'</p></td>\
+                                </tr>';
+                            /*if(res.getFieldValue('entity')){
+                               template +='<tr>\
+                                <td width="25%" style="font-weight: bold;"><p class="alignL">Supplier</p></td>\
+                                <td align="center" width="4%">&nbsp;&nbsp;:&nbsp;&nbsp;</td>\
+                                <td><p class="alignL">'+relaceCharector(res.getFieldText('entity'))+'</p></td>\
+                                </tr>'; 
+                            }
+
+                            if(res.getFieldValue("billaddress")){
+                                template +='<tr>\
+                                <td width="25%" style="font-weight: bold;">Address </td>\
+                                <td align="center" width="4%">&nbsp;&nbsp;:&nbsp;&nbsp;</td>\
+                                <td>';
+                                template +=relaceCharector(res.getFieldValue("billaddress"));
+                                template +='</td></tr>';
+                            }
+                            if(entityRec.getFieldValue("email")){
+                                template +='<tr>\
+                                <td width="25%" style="font-weight: bold;">E-mail </td>\
+                                <td align="center" width="4%">&nbsp;&nbsp;:&nbsp;&nbsp;</td>\
+                                <td>'+entityRec.getFieldValue("email")+'</td>\
+                                </tr>';
+                            }                         
+                            if(entityRec.getFieldValue("phone")){
+                                template+='<tr>\
+                                    <td width="25%" style="font-weight: bold;">Phone </td>\
+                                    <td align="center" width="4%">&nbsp;&nbsp;:&nbsp;&nbsp;</td>\
+                                    <td>'+entityRec.getFieldValue("phone")+'</td>\
+                                </tr>';
+                            }
+                            if(entityRec.getFieldValue("vatregnumber")){
+                            template +='<tr>\
+                                    <td width="25%" style="font-weight: bold;">TRN</td>\
+                                    <td align="center" width="4%">&nbsp;&nbsp;:&nbsp;&nbsp;</td>\
+                                    <td>'+entityRec.getFieldValue("vatregnumber")+'</td>\
+                                </tr>';
+                             }*/
+                            
+                        template +='</table>\
+                    </td>\
+                    <td align="right">\
+                        <table>';
+                        if(res.getFieldValue('trandate')){
+                            template +='<tr>\
+                                <td width="25%" style="font-weight: bold;"><p class="alignL">PR Date</p></td>\
+                                <td align="center" width="4%">&nbsp;&nbsp;:&nbsp;&nbsp;</td>\
+                                <td><p class="alignL">${record.trandate}</p></td>\
+                            </tr>';
+                        }
+                         if(res.getFieldValue('memo')){
+                           template +='<tr>\
+                                <td width="25%" style="font-weight: bold;"><p class="alignL">Memo</p></td>\
+                                <td align="center" width="4%">&nbsp;&nbsp;:&nbsp;&nbsp;</td>\
+                                <td><p class="alignL">${record.memo}</p></td>\
+                            </tr>';
+                        }
+                        template +='</table>\
+                    </td>\
+                </tr>\
+            </table>';
+            template +='<span  style="font-weight: bold;">&nbsp;</span>';
+            template +='<table class="itemtable" style="width: 100%; margin-top: 10px;">\
+                            <!-- start items -->\
+                                    <thead>\
+                                        <tr>\
+                                          <th class="td_right_line" width="4%" colspan="1"><p class="alignC">Sl #</p></th>\
+                                            <th class="td_right_line" width="10%" colspan="5">\
+                                                <p class="alignL">Item Code</p>\
+                                            </th>\
+                                            <th class="td_right_line" width="20%" colspan="8">\
+                                                <p class="alignL">Item Description</p>\
+                                            </th>\
+                                            <th class="td_right_line" width="06%" colspan="3"><p class="alignL">Qty</p></th>\
+                                            <th width="06%" colspan="3"><p class="alignL">UOM</p></th>\
+                                            <!--<th class="td_right_line" width="06%" colspan="3"><p class="alignL">Amount</p></th>\
+                                            <th  width="06%" colspan="3"><p class="alignL">Need Date</p></th>-->\
+                                            </tr>\
+                                    </thead>';
+
+            var line_item_count = res.getLineItemCount("item");
+             nlapiLogExecution("debug","line_item_count",line_item_count);
+             var SrNo =0;
+            for(var i=1;i<=line_item_count;i++){
+                SrNo++;
+                var itemid = res.getLineItemValue("item","item",i);
+                nlapiLogExecution("debug","itemid",itemid +" recID "+recID);
+                var itemRec = nlapiLoadRecord("inventoryitem", itemid);
+                nlapiLogExecution('DEBUG','itemRec',itemRec);
+                var invDetails = res.viewLineItemSubrecord('item','inventorydetail',i);
+                nlapiLogExecution('DEBUG','invDetails',invDetails);
+                
+                var colo_code = "#FFFFFF";
+                if(i%2 == 0){
+                    colo_code = "#f4f4f4";
+                }
+                    //${((item_index%2) == 0)?string(\'#FFFFFF\',\'#f4f4f4\')}
+                template +='<tr class="td_top_line">\
+                                        <td  class="td_right_line" colspan="1" line-height="150%"><p class="alignC">'+SrNo+'</p></td>\
+                                        <td  class="td_right_line" colspan="5" line-height="150%">\
+                                            <p class="alignL">'+relaceCharector(res.getLineItemText("item","item",i))+'</p>\
+                                        </td>\
+                                         <td  class="td_right_line" colspan="8" line-height="150%">\
+                                            <p class="alignL">'+relaceCharector(res.getLineItemValue("item","description",i))+'</p>\
+                                        </td>';
+                                        template +='<td class="td_right_line" colspan="3">\
+                                            <p class="alignL">'+res.getLineItemValue("item","quantity",i)+'</p>\
+                                        </td>';
+                                         template +='<td  colspan="3">\
+                                          <p class="alignL">';
+                                          if(res.getLineItemValue("item","units_display",i))
+                                            template +=res.getLineItemValue("item","units_display",i);
+                                            template +='&nbsp;</p>\
+                                      </td>';
+                                      //   template +='<td  colspan="3">\
+                                      //     <p class="alignL">'+res.getLineItemValue("item","amount",i)+'</p>\
+                                      // </td>';
+                                      //   template +='<td colspan="3">\
+                                      //       <p class="alignL">'+res.getLineItemValue("item","expectedreceiptdate",i)+'</p>\
+                                      //   </td>';                                      
+                                        template+='</tr>';
+                }
+                template +='</table>';
+                if(res.getFieldValue("custbody6"))
+                    var remarks = relaceCharector(res.getFieldValue("custbody6"));
+                else 
+                    var remarks = relaceCharector(res.getFieldValue("memo"));
+
+                var custbody_approved_by = "";
+                if(res.getFieldValue("custbody_approved_by")){
+                    //var custbody_approved_by = res.getFieldValue("custbody_approved_by");
+                    var employee = nlapiLoadRecord("employee",res.getFieldValue("custbody_approved_by"));
+                    if(employee.getFieldValue("firstname"))
+                        custbody_approved_by=employee.getFieldValue("firstname")+" ";
+                    if(empRec.getFieldValue("lastname"))
+                        custbody_approved_by +=employee.getFieldValue("lastname");
+                }
+                var custbody_requested_by = "";
+               /* if(res.getFieldValue("custbody_requested_by")){
+                     var employee = nlapiLoadRecord("employee",res.getFieldValue("custbody_requested_by"));
+                    if(employee.getFieldValue("firstname"))
+                        custbody_requested_by=employee.getFieldValue("firstname")+" ";
+                    if(empRec.getFieldValue("lastname"))
+                        custbody_requested_by +=employee.getFieldValue("lastname");
+                }*/
+                if(res.getFieldValue("custbody9")){
+                        custbody_requested_by =res.getFieldValue("custbody9");
+                }
+                
+             template +='<table width="100%" style="padding-top:5px;margin-top: 15px;">\
+                <tr>\
+                <td style="padding-top:0px;font-size: 8pt;" colspan="8"><p class="alignL"><b>Remarks</b><br/><br/>'+remarks+'</p></td>\
+                    <td style="padding-top:0px;font-size: 8pt;" colspan="4"><p class="alignL"><b>&nbsp;</b></p><br/><br/>&nbsp;</td>\
+                </tr>\
+                <tr>\
+                <td style="padding-top:0px;font-size: 8pt;" colspan="8"><p class="alignL"><b>Quotation No.</b><br/><br/>${record.custbody8}</p></td>\
+                    <td style="padding-top:0px;font-size: 8pt;" colspan="4"><p class="alignL"><b>&nbsp;</b></p><br/><br/>&nbsp;</td>\
+                </tr>\
+                <tr>\
+                <td style="padding-top:0px;font-size: 8pt;" colspan="8"><p class="alignL"><b>Prepared By</b></p><br/><br/>'+created_by_name+'</td>\
+                    <td style="padding-top:0px;font-size: 8pt;" colspan="4"><p class="alignL"><b>Requested By</b></p><br/><br/>'+custbody_requested_by+'</td>\
+                    <td align="right" style="padding-top:0px;font-size: 8pt;" colspan="4"><p class="alignL"><b>Approved By</b></p><br/><br/>'+custbody_approved_by+'</td>\
+                </tr>\
+            </table>';       
+           //res.getFieldText("custbody_prepared_by")
+            template +='<!--<hr style="width: 100%; height: 1px; background-color: #ffc966;" />-->\
+        </body>\
+    </pdf>';
+      renderer.setTemplate(template);
+      renderer.addRecord('record', res);
+      var xml = renderer.renderToString();
+      var file = nlapiXMLToPDF(xml);
+      response.setContentType('PDF', 'WorkOrderIssue_'+res.getFieldValue("tranid")+'.pdf', 'inline');
+      response.write(file.getValue());
+    }
+    function numberWithCommas(x){
+      return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    }
+    function relaceCharector(charVal){
+      return charVal.replace(/&/g,"&amp;");
+      /*if(charVal)
+      return charVal.replace(/[^a-zA-Z ]/g, "");
+      else
+        return "";*/
+    }
+    function strReplace(str,replaceVal){
+      var res = str.replace(replaceVal, "");
+      return res;
+    }

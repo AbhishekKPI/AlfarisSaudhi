@@ -1,0 +1,293 @@
+function printSupplierLedgerAction(request, response) {
+    if (request.getMethod() == 'GET') {
+
+        var context = nlapiGetContext();
+        var preparer = context.getName();
+
+        var monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        var vendorID = request.getParameter('vendor');
+        var fromdate = request.getParameter('fromdate');
+        var fdate = nlapiStringToDate(fromdate);
+        var from_date = fdate.getDate() + "-" + monthNames[fdate.getMonth()] + "-" + fdate.getFullYear();
+        var cur = request.getParameter('currency_sel');
+        var currency_text = request.getParameter('currency_text');
+        var subsidiary = request.getParameter('subsi');
+        nlapiLogExecution("debug","subsidiary",subsidiary)
+        var todate = request.getParameter('todate');
+        var tdate = nlapiStringToDate(todate);
+        var to_date = tdate.getDate() + "-" + monthNames[tdate.getMonth()] + "-" + tdate.getFullYear();
+        //var balance = request.getParameter('balance');
+
+        var vendRec = nlapiLoadRecord('vendor', vendorID);
+        var vendId = vendRec.getFieldValue('entityid');
+        if (vendRec.getFieldValue('companyname')) {
+            var company_name = relaceCharector(vendRec.getFieldValue('altname'));
+        } else {
+            var company_name = '';
+        }
+        if (vendRec.getFieldValue('defaultaddress')) {
+            var customer_add = relaceCharector(vendRec.getFieldValue('defaultaddress'));
+        } else {
+            var customer_add = '';
+        }
+        var phone_num = vendRec.getFieldValue('phone');
+        var fax_num = vendRec.getFieldValue('fax');
+
+        var subrec = nlapiLoadRecord('subsidiary', subsidiary);
+        var subs_legal_name = subrec.getFieldValue('legalname');
+        var subs_ph = subrec.getFieldValue('addrphone');
+        var subs_fax = subrec.getFieldValue('fax');
+        var subs_add = subrec.getFieldValue('mainaddress_text');
+        var template = "";
+        template += "<h4 align=\"center\" style=\"font-style:normal;height:2px;\">INDIVIDUAL SUPPLIER LEDGER</h4> ";
+        template += '<table style="width:100%;"><tr>';
+        template += '<td style="width:50%;height:50px;">';
+        template += '<table style="margin-top: 20px;font-size:12px;font-family:verdana,geneva,sans-serif;align:left;width:60%;">';
+        template += '<tr><td></td></tr>';
+        template += '<tr><td colspan = "1"><b>To</b></td><td colspan = "1"><b>:</b>&nbsp;</td><td colspan = "7">' + company_name + '</td></tr>';
+        if (customer_add == null) {
+            template += '<tr><td></td></tr>';
+        } else {
+            template += '<tr><td colspan = "2"></td><td colspan = "7">' + relaceCharector(customer_add) + '</td></tr>';
+        }
+        if (phone_num == null) {
+            template += '<tr><td></td></tr>';
+        } else {
+            template += '<tr><td colspan = "2"></td><td colspan = "7">Ph <b>:</b>' + phone_num + '</td></tr>';
+        }
+        if (fax_num == null) {
+            template += '<tr><td></td></tr>';
+        } else {
+            template += '<tr><td colspan = "2"></td><td colspan = "7">Fax <b>:</b>' + fax_num + '</td></tr>';
+        }
+        template += '</table>';
+        template += '</td>';
+        template += '<td style="width:50%;height:50px;" align="right">';
+        template += '<table style="margin-top: 20px;font-size:12px;font-family:verdana,geneva,sans-serif;">';
+        template += '<tr><td></td></tr>';
+        template += '<tr><td colspan = "1"><b>From</b></td><td colspan = "1"><b>:</b>&nbsp;</td><td colspan = "7">' + subs_legal_name + '</td></tr>';
+        if (subs_add == null) {
+            template += '<tr><td></td></tr>';
+        } else {
+            template += '<tr><td colspan = "2"></td><td colspan = "7">' + relaceCharector(subs_add) + '</td></tr>';
+        }
+        if (subs_ph == null) {
+            template += '<tr><td></td></tr>';
+        } else {
+            template += '<tr><td colspan = "2"></td><td colspan = "7">Ph <b>:</b>' + subs_ph + '</td></tr>';
+        }
+        if (subs_fax == null) {
+            template += '<tr><td></td></tr>';
+        } else {
+            template += '<tr><td colspan = "2"></td><td colspan = "7">Fax <b>:</b>' + subs_fax + '</td></tr>';
+        }
+        template += '</table>';
+        template += '</td></tr>';
+        template += '</table>';
+        template += '<table style="width:100%;font-size:12px;font-family:verdana,geneva,sans-serif;">';
+        template += '<tr>';
+        template += '<td style="width:14%;"><b>From</b></td>';
+        template += '<td style="width:1%;"><b>:</b></td>';
+        template += '<td style="width:45%;">' + from_date + '</td>';
+        template += '<td style="width:3%;"><b>To</b></td>';
+        template += '<td style="width:1%;"><b>:</b></td>';
+        template += '<td style="width:37%;">' + to_date + '</td>';
+        template += '</tr>';
+        template += '<tr>';
+        template += '<td style="width:14%;"><b>Currency</b></td>';
+        template += '<td style="width:1%;"><b>:</b></td>';
+        template += '<td style="width:45%;">' + currency_text + '</td>';
+        template += '<td style="width:3%;">&nbsp;</td>';
+        template += '<td style="width:1%;">&nbsp;</td>';
+        template += '<td style="width:37%;">&nbsp;</td>';
+        template += '</tr>';
+        template += '</table>';
+        var individualfilter = [
+            ['vendorLine.internalid', 'anyof', vendorID], 'And', ['subsidiary', 'anyof', subsidiary], 'And', ['trandate', 'onorafter', fromdate], 'And', ['currency', 'anyof', cur], 'and', ['trandate', 'onorbefore', todate]
+        ];
+        var balanceFilter = [
+            ['vendorLine.internalid', 'anyof', vendorID], 'And', ['subsidiary', 'anyof', subsidiary], 'And', ['currency', 'anyof', cur], 'And', ['trandate', 'before', fromdate]
+        ];
+        var balanceforward = nlapiSearchRecord('transaction', 'customsearch_supplier_balance_forward_3', balanceFilter);
+        var supplierledger = nlapiSearchRecord('transaction', 'customsearch_individual_supplier_ledger', individualfilter);
+
+        template += '<table style="width:100%;font-family:verdana,geneva,sans-serif;font-size:10px;">';
+        template += '<tr style="font-family:verdana,geneva,sans-serif;font-size:12px;font-weight:bold;">';
+        template += '<td align="center" style="padding:4px;border-top:1px solid black;border-bottom:1px solid black;">Date</td>';
+        template += '<td align="center" style="padding:4px;width:30px;border-top:1px solid black;border-bottom:1px solid black;">Type</td>';
+        template += '<td align="center" style="padding:4px;width:45px;border-top:1px solid black;border-bottom:1px solid black;">Ref. No.</td>';
+        template += '<td align="center" style="padding:4px;width:45px;border-top:1px solid black;border-bottom:1px solid black;">Tran. No.</td>';
+        template += '<td align="center" style="padding:4px;width:70px;border-top:1px solid black;border-bottom:1px solid black;">Description</td>';
+        template += '<td align="center" style="padding:4px;width:40px;border-top:1px solid black;border-bottom:1px solid black;">Debit</td>';
+        template += '<td align="center" style="padding:4px;width:40px;border-top:1px solid black;border-bottom:1px solid black;">Credit</td>';
+        template += '<td align="center" style="padding:4px;width:70px;border-top:1px solid black;border-bottom:1px solid black;">Balance</td>';
+        template += '</tr>';
+        var debittotal = 0;
+        var credittotal = 0;
+        var balanceamt = 0;
+        var baltot = 0;
+        var debitsum = 0;
+        var creditsum = 0;
+        var debitamount = 0;
+        var creditamount = 0;
+        var balance = 0;
+
+        if (balanceforward) {
+            for (var j = 0; j < balanceforward.length; j++) {
+                baltot = +baltot + +balanceforward[j].getValue('fxamount', null, 'sum');
+                debitsum = +debitsum + +balanceforward[j].getValue('debitamount', null, 'sum');
+                creditsum = +creditsum + +balanceforward[j].getValue('creditamount', null, 'sum');
+            }
+            balance = +debitsum - +creditsum;
+            template += '<tr style="font-family:verdana,geneva,sans-serif;font-size:10px;"><td colspan="7" style="font-size:10px;font-weight:bold;font-weight:bold;border-bottom:solid 1px black">Balance forward</td><td align="right" style="font-size:10px;font-weight:bold;align:center;border-bottom:1px solid black;">' + numberWithCommas(baltot.toFixed(2)) + '</td></tr>';
+        } else {
+            template += '<tr style="font-family:verdana,geneva,sans-serif;font-size:10px;"><td colspan="7" style="font-size:10px;font-weight:bold;font-weight:bold;border-bottom:solid 1px black">Balance forward</td><td align="right" style="font-size:10px;font-weight:bold;align:center;border-bottom:1px solid black;">' + numberWithCommas(baltot.toFixed(2)) + '</td></tr>';
+        }
+        if (supplierledger) {
+            for (var i = 0; i < supplierledger.length; i++) {
+                //balanceamt = supplierledger[0].getValue("balance",'vendor','sum');
+                //var vendorlineid = supplierledger[i].getValue("internalid",'vendorLine','group');
+                var tran_date = nlapiStringToDate(supplierledger[i].getValue("trandate", null, 'min'));
+                var tr_date = tran_date.getDate() + "-" + monthNames[tran_date.getMonth()] + "-" + tran_date.getFullYear();
+                var exch = supplierledger[i].getValue("exchangerate", null, 'min');
+                var debitamount = (supplierledger[i].getValue("debitamount", null, 'sum') / exch);
+                var creditamount = (supplierledger[i].getValue("creditamount", null, 'sum') / exch);
+                var trannum = (supplierledger[i].getValue("transactionnumber", null, 'min'));
+                var tranType = (supplierledger[i].getValue("type", null, 'min'));
+                if (tranType == "Bill Payment") {
+                    debitamount = (supplierledger[i].getValue("fxamount", null, 'sum') / exch);
+                    if (debitamount) {
+                        debitamount = Math.abs(debitamount);
+                    }
+
+                    // nlapiLogExecution("DEBUG","debitamount",debitamount);
+                }
+                // nlapiLogExecution("DEBUG","tranType",tranType);
+                var memo = (supplierledger[i].getValue("memomain", null, 'min'));
+                if (trannum) {
+                    trannum = relaceCharector(trannum);
+                } else {
+                    trannum = '';
+                }
+                if (memo) {
+                    memo = (relaceCharector(memo));
+                } else {
+                    memo = '';
+                }
+                template += '<tr style="font-family:verdana,geneva,sans-serif;font-size:10px;">';
+                template += '<td align="left" style="padding:4px;border-bottom:1px solid black;">' + tr_date + '</td>';
+                template += '<td align="left" style="padding:4px;width:30px;border-bottom:1px solid black;">' + supplierledger[i].getValue("type", null, 'min') + '</td>';
+                template += '<td align="left" style="padding:4px;width:45px;border-bottom:1px solid black;">' + relaceCharector(supplierledger[i].getValue("tranid", null, 'min')) + '</td>';
+                template += '<td align="left" style="padding:4px;width:45px;border-bottom:1px solid black;">' + trannum + '</td>';
+                template += '<td align="left" style="padding:4px;width:70px;border-bottom:1px solid black;">' + memo + '</td>';
+                if (debitamount != 0) {
+                    template += '<td align="right" style="padding:4px;width:40px;border-bottom:1px solid black;">' + numberWithCommas(debitamount.toFixed(2)) + '</td>';
+                } else {
+                    template += '<td align="right" style="padding:4px;width:40px;border-bottom:1px solid black;">&nbsp;</td>';
+                }
+                if (creditamount != 0) {
+                    template += '<td align="right" style="padding:4px;width:70px;border-bottom:1px solid black;">' + numberWithCommas(creditamount.toFixed(2)) + '</td>';
+                } else {
+                    template += '<td align="right" style="padding:4px;width:70px;border-bottom:1px solid black;">&nbsp;</td>';
+                }
+                if (i == 0) {
+                    balanceamt = +balanceamt + +baltot + (+creditamount - +debitamount);
+                    template += '<td align="right" style="padding:4px;width:70px;border-bottom:1px solid black;">' + numberWithCommas(balanceamt.toFixed(2)) + '</td>';
+                } else {
+                    balanceamt = +balanceamt + (+creditamount - +debitamount);
+                    template += '<td align="right" style="padding:4px;width:70px;border-bottom:1px solid black;">' + numberWithCommas(balanceamt.toFixed(2)) + '</td>';
+                }
+                template += '</tr>';
+                debittotal = +debittotal + +debitamount;
+                credittotal = +credittotal + +creditamount;
+            }
+        }
+        template += '<tr>';
+        template += '<td colspan="5" style="font-size:10px;font-weight:bold;font-weight:bold;border-bottom:solid 0.2px #e3e3e3;">Total</td>';
+        template += '<td align="right" style="font-size:10px;font-weight:bold;align:center;border-bottom:1px solid black;">' + numberWithCommas(debittotal.toFixed(2)) + '</td>';
+        template += '<td align="right" style="font-size:10px;font-weight:bold;align:center;border-bottom:1px solid black;">' + numberWithCommas(credittotal.toFixed(2)) + '</td>';
+        template += '<td align="right" style="font-size:10px;font-weight:bold;align:center;border-bottom:1px solid black;"></td>';
+        template += '</tr>';
+        //  template += '<tr><td>&nbsp;</td></tr>'; template += '<tr><td>&nbsp;</td></tr>';
+        //template += '<tr><td align="center" colspan="3" style="font-size:10px;font-weight:bold;font-weight:bold;border-bottom:solid 0.2px #e3e3e3;"><b>Prepared By : '+preparer+'</b></td></tr>';
+        template += '</table>';
+        var xml = '<?xml version="1.0"?><!DOCTYPE pdf PUBLIC "-//big.faceless.org//report" "report-1.1.dtd" [<!ENTITY nbsp "&#160;">] >'; // start of template
+        xml += '<pdf>';
+        xml += '<head>';
+
+
+
+
+        xml += '<macrolist>';
+
+        xml += '<macro id="myheader">';
+        if (subsidiary == '1') { //
+            //xml += '<table style="width: 100%;"><tr><td><img src="https://system.eu2.netsuite.com/core/media/media.nl?id=1855&amp;c=4119372&amp;h=b46037635396c70b981c" style="width:657px; height:130px;" /></td></tr></table>';
+            xml += '<table class="header" style="width: 100%;margin-left:-45px; margin-right:-65px;margin-top:-46px; "><tr><td><img src="https://system.eu2.netsuite.com/core/media/media.nl?id=26487&amp;c=4647359&amp;h=N7yMHyudqD68aN6yaYCarDgu-nT4u0aoi7g3lKZ708dlEsDK"  style="width:64%;height:60%;"/></td></tr></table>';
+        }
+
+        if (subsidiary == '2') { //
+            //xml += '<table style="width: 100%;"><tr><td><img src="https://system.eu2.netsuite.com/core/media/media.nl?id=1855&amp;c=4119372&amp;h=b46037635396c70b981c" style="width:657px; height:130px;" /></td></tr></table>';
+            xml += '<table class="header" style="width: 100%;margin-left:-45px; margin-right:-65px;margin-top:-46px; "><tr><td><img src="https://system.eu2.netsuite.com/core/media/media.nl?id=26489&amp;c=4647359&amp;h=8jLOJuWgAnB4EXpAfSKtQfxbGPoNlcPY1buLTrUncQpcjvHG"  style="width:64%;height:60%;"/></td></tr></table>';
+        }
+        if (subsidiary == '8') { //
+            //xml += '<table style="width: 100%;"><tr><td><img src="https://system.eu2.netsuite.com/core/media/media.nl?id=1855&amp;c=4119372&amp;h=b46037635396c70b981c" style="width:657px; height:130px;" /></td></tr></table>';
+            xml += '<table class="header" style="width: 100%;margin-left:-45px; margin-right:-65px;margin-top:-46px; "><tr><td><img src="https://system.eu2.netsuite.com/core/media/media.nl?id=26488&amp;c=4647359&amp;h=6Uxc0nbUkUIpXGHsPLniGwEfM-PfsyucvPJwV0Vhus-USYG_"  style="width:64%;height:60%;"/></td></tr></table>';
+        }
+        if (subsidiary == '4') { //
+            //xml += '<table style="width: 100%;"><tr><td><img src="https://system.eu2.netsuite.com/core/media/media.nl?id=1855&amp;c=4119372&amp;h=b46037635396c70b981c" style="width:657px; height:130px;" /></td></tr></table>';
+            xml += '<table class="header" style="width: 100%;margin-left:-47px;margin-top:-48px; "><tr><td><img src="https://4647359.app.netsuite.com/core/media/media.nl?id=26192&amp;c=4647359&amp;h=oq9PgProIy5x10gZhcjd4oALHFWCIZRMe15goyaqJkr39q73&amp;fcts=20220928230544&amp;whence=" style="width: 765px; height: 120px;" /></td></tr></table>';
+        }
+        if (subsidiary == '11') { //
+            //xml += '<table style="width: 100%;"><tr><td><img src="https://system.eu2.netsuite.com/core/media/media.nl?id=1855&amp;c=4119372&amp;h=b46037635396c70b981c" style="width:657px; height:130px;" /></td></tr></table>';
+            xml += '<table class="header" style="width: 100%;margin-left:-48px;margin-top:-48px;"><tr><td><img src="https://4647359.app.netsuite.com/core/media/media.nl?id=26937&amp;c=4647359&amp;h=ZxOm5iwM9lPCaL2O5i19J6klbng6EfwWNN29D6p5dCs4NgZB"  style="height:70%;"/></td></tr></table>';
+        }
+        xml += '</macro>';
+
+        xml += '<macro id="myfooter">';
+
+        xml += '<table class="footer" style="width: 100%;margin-left:-45px; margin-right:-55px;margin-top:100px;font-size:12px;font-weight:normal;">';
+        xml += '<tr><td><img src="https://system.eu2.netsuite.com/core/media/media.nl?id=22289&amp;c=4647359&amp;h=RqN0ZlhUyHnIqITW00RkJlkwlhQ3_qQjISqhN5ihvAiMBU_V"  style="width:55%;height:60%;"/></td></tr>';
+        // xml += '<tr><td align="left" style="font-size:9px;">*This is a computer generated statement,that requires no signature.</td></tr>';
+        //xml += '<tr><td align="left">Vendor Ref# ' + vendorID + '</td><td align="right">( page <pagenumber/> of <totalpages/> ) </td></tr>';
+        //  xml += '<tr><td align="center">( page <pagenumber/> of <totalpages/> ) </td></tr>';
+        xml += '</table>';
+        xml += '</macro>';
+        xml += '</macrolist>';
+
+
+
+
+        // xml += '<style>td p { align:left; }</style>';
+        // xml += '<macrolist>';
+
+        // xml += '<macro id="myfooter">';              
+        // xml += '<table class="footer" style="width: 100%;font-size:12px;font-weight:normal;">';
+        // xml += '<tr><td align="left">Vendor Ref# '+vendorID+'</td><td align="right">( page <pagenumber/> of <totalpages/> ) </td></tr>';
+        //     xml += '</table>';
+        // xml += '</macro>';
+        // xml += '</macrolist>';
+        xml += '</head>';
+        xml += '<body style="font-family:sans-serif;background-color:#ffffff;" header="myheader" header-height="14%" footer = "myfooter" footer-height="16%" footer-size="A4">';
+
+        xml += template;
+        xml += '</body>';
+        xml += '</pdf>';
+
+        // run the BFO library to convert the xml document to a PDF 
+        var file = nlapiXMLToPDF(xml);
+        // set content type, file name, and content-disposition (inline means display in browser)
+
+        response.setContentType('PDF', 'individualSupplierLedger.pdf', 'inline');
+        response.write(file.getValue());
+    }
+
+    function numberWithCommas(x) {
+        return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    }
+
+    function relaceCharector(charVal) {
+        return charVal.replace(/&/g, "&amp;");
+    }
+
+}
